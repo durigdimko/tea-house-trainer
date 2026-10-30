@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Тренер «Чайный домик»</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI",system-ui,sans-serif;background:#ead9bb;color:#6b4a2f}
+h1{font-size:19px;margin:0 0 10px}
+.wrap{display:flex;gap:20px;padding:16px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+.panel{width:390px;max-width:100%;display:flex;flex-direction:column;gap:12px}
+.rightCol{width:min(520px,100%);display:flex;flex-direction:column;gap:12px}
+.card{background:#fbf3e3;border-radius:14px;padding:12px 14px;box-shadow:0 2px 8px #0002}
+.card h3{margin:0 0 8px;font-size:15px}
+details.card>summary,summary{cursor:pointer;font-size:14px}
+.boardBox{background:#9c6c48;padding:8px;border-radius:14px;width:fit-content;margin:8px auto 0}
+#board{--s:52px;display:grid;grid-template-columns:repeat(6,var(--s));grid-auto-rows:var(--s);gap:3px;background:#d8b48c;padding:5px;border-radius:9px}
+.cell{position:relative;border-radius:7px;background:#fcf5e6;display:flex;align-items:center;justify-content:center;font-size:30px;cursor:pointer;user-select:none}
+.cell.alt{background:#f7edcb}
+.cell.food{background:repeating-linear-gradient(45deg,#f9e2cc 0 6px,#f5d6bb 6px 12px)}
+.cell.store{background:radial-gradient(circle,#fffaf0 0 50%,#efd8b8 52%,#fcf5e6 57%);outline:2px dashed #b88b62;outline-offset:-4px}
+.cell .rank{position:absolute;left:3px;top:2px;font-size:11px;font-weight:800;color:#fff;border-radius:9px;padding:0 5px;background:#3fa34d}
+.cell.r1{box-shadow:inset 0 0 0 4px #3fa34d}
+.cell.glow{box-shadow:inset 0 0 0 3px #fff,0 0 12px 4px #fff6d8}
+.cell.bad{animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+button,.btnlike{font:inherit;border:0;border-radius:10px;padding:7px 12px;background:#e9c9a0;color:#5a3c24;cursor:pointer;font-weight:600;display:inline-block}
+button:hover,.btnlike:hover{background:#e2b984}
+button:disabled{opacity:.45;cursor:default}
+button.sm,.btnlike.sm{padding:5px 10px;font-size:13px}
+.pal{display:grid;grid-template-columns:repeat(9,1fr);gap:5px}
+.pi{height:44px;border-radius:8px;background:#f3e3c8;display:flex;align-items:center;justify-content:center;font-size:23px;cursor:pointer;position:relative;border:2px solid transparent}
+.pi:hover{border-color:#e9b27a}
+.pi.sel{border-color:#e07a3c;background:#ffe9d0}
+.pi .key{position:absolute;right:3px;bottom:1px;font-size:10px;font-weight:700;opacity:.55}
+.big{width:62px;height:62px;border-radius:12px;background:#f3e3c8;display:flex;align-items:center;justify-content:center;font-size:38px}
+.big.wait{outline:3px dashed #e07a3c;font-size:24px}
+.score{font-size:22px;font-weight:800}
+.small{font-size:12px;opacity:.85}
+.lbl{font-size:12px;font-weight:700;margin:10px 0 4px}
+.tips li{margin-bottom:5px;font-size:13px}
+canvas{display:block;max-width:100%;border-radius:10px;margin-top:8px}
+canvas.th{display:inline-block;width:30px;height:30px;margin:1px;border-radius:4px;image-rendering:pixelated;cursor:pointer;vertical-align:middle}
+canvas.th:hover{outline:3px solid #e0303c}
+.memRow{display:flex;flex-wrap:wrap;align-items:center;gap:1px;padding:4px 0;border-bottom:1px solid #ecdcc0}
+.memL{width:70px;font-size:14px;flex:none}
+#full{cursor:crosshair}
+#crop{cursor:pointer;width:100%;height:auto}
+#capMsg{margin-top:8px;line-height:1.4;font-size:13px;padding:6px 8px;border-radius:8px;background:#f4e6cc}
+#capMsg.warn{background:#ffe0c8;border:2px dashed #e07a3c}
+#glowInfo{margin-top:6px;font-size:13px}
+#hint{margin-top:8px;font-size:14px;line-height:1.45;min-height:40px}
+#hint b{color:#3a7d3f}
+.menu{position:absolute;z-index:50;background:#fff8ec;border:2px solid #e9c9a0;border-radius:12px;padding:8px;box-shadow:0 8px 24px #0005;width:310px}
+.mgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:6px}
+.mgrid .pi{height:40px;font-size:21px}
+.ggrid{display:grid;grid-template-columns:repeat(9,1fr);gap:3px;margin-top:4px;padding:4px;border-radius:8px;background:#fff3c4}
+.ggrid .pi{height:32px;font-size:18px;background:#fffbe6}
+.ptsTab{display:grid;grid-template-columns:repeat(3,1fr);gap:4px 10px;margin-top:6px;font-size:13px}
+.ptsTab input{width:64px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="panel">
+    <div class="card">
+      <h1>🍵 Тренер «Чайный домик»</h1>
+      <div class="row">
+        <button id="bUndo">↶ Отменить</button>
+        <button id="bNew">🆕 Новая игра</button>
+        <button id="bRead">📥 С картинки</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div class="row">
+          <div><div class="small">В руке</div><div class="big" id="cur"></div></div>
+          <div><div class="small">Поднос</div><div class="big" id="stor"></div></div>
+        </div>
+        <div style="text-align:right"><div class="small">Очки (по расчёту)</div><div class="score" id="score">0</div></div>
+      </div>
+      <div class="lbl">✨ Если ошибся, что в руке, — выбери (клик или клавиши 1–9):</div>
+      <div class="pal" id="palCur"></div>
+    </div>
+
+    <div class="card small">
+      <div id="learnInfo"></div>
+      <details id="memDet" style="margin-top:6px">
+        <summary><b>🧠 Память: посмотреть и удалить ошибки</b></summary>
+        <div class="small" style="margin:6px 0">Клик по картинке — удалить образец.</div>
+        <div id="memList"></div>
+      </details>
+      <div class="row" style="margin-top:8px">
+        <button class="sm" id="bExp">💾 Сохранить память в файл</button>
+        <label class="btnlike sm">📂 Загрузить память<input type="file" id="fImp" accept=".json,application/json" hidden></label>
+        <button class="sm" id="bClean">🧹 Почистить</button>
+      </div>
+    </div>
+
+    <details class="card" id="setDet">
+      <summary><b>⚙️ Расчёт и очки</b> <span class="small">(трогать не обязательно)</span></summary>
+      <div class="lbl">Сила расчёта</div>
+      <select id="selDepth">
+        <option value="0">Быстро (2 хода вперёд)</option>
+        <option value="1">Сильно (партии на 10 ходов, ~1,5 с)</option>
+        <option value="2">Максимум (партии на 14 ходов, ~4 с)</option>
+      </select>
+      <div class="lbl">Шансы выпадения (тренер считает сам по твоим партиям)</div>
+      <div class="small" id="freqInfo"></div>
+      <div class="row" style="margin-top:4px"><button class="sm" id="bFreqReset">сбросить счёт</button></div>
+      <div class="lbl">Очки за слияние (очки из игры, делённые на 10)</div>
+      <div class="ptsTab" id="ptsTab"></div>
+    </details>
+
+    <div class="card tips">
+      <h3>📖 Коротко</h3>
+      <ul style="padding-left:18px;margin:0">
+        <li>Запуск: «📷 Начать захват» → «📥 С картинки». Дальше просто ходи в игре.</li>
+        <li>Что в руке, тренер узнаёт по мигающей иконке сам (строка «✨ В руке»). Ошибся — нажми нужную иконку слева или клавишу 1–9: твой выбор держится до хода и запоминается.</li>
+        <li>Если тренер видит в клетке не то, что у него записано, — сам ставит то, что видит.</li>
+        <li>Зелёная <b>1</b> — лучший ход. Наведи мышку на клетку — покажет, что будет. После хода убирай мышку с игрового поля.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="rightCol">
+    <div class="card">
+      <div class="row">
+        <button id="bCap">📷 Начать захват</button>
+        <button id="bRect" disabled>Выделить поле</button>
+        <button id="bSync" class="sm">🔄 Поле совпадает</button>
+      </div>
+      <div id="glowInfo"></div>
+      <div id="capMsg"></div>
+      <canvas id="full" style="display:none"></canvas>
+      <canvas id="crop" style="display:none"></canvas>
+      <label class="small" style="display:block;margin-top:6px"><input type="checkbox" id="ovChk" checked> Показывать на картинке, как тренер понял поле</label>
+      <div id="hint"></div>
+      <details><summary class="small">Рамка и чувствительность</summary>
+        <div class="row" style="margin-top:8px">
+          <span class="small">Рамка:</span>
+          <button class="sm" data-n="x-">←</button><button class="sm" data-n="x+">→</button>
+          <button class="sm" data-n="y-">↑</button><button class="sm" data-n="y+">↓</button>
+          <button class="sm" data-n="s-">−</button><button class="sm" data-n="s+">+</button>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <label class="small">Порог изменения (влево — чувствительнее) <input type="range" id="diff" min="8" max="60" value="24"></label>
+        </div>
+        <div class="row" style="margin-top:6px"><button class="sm" id="bForget">Забыть всю память</button></div>
+      </details>
+    </div>
+
+    <details class="card" id="boardDet">
+      <summary><b>Поле тренера</b> <span class="small">(не обязательно — всё видно на картинке выше)</span></summary>
+      <div class="boardBox"><div id="board"></div></div>
+    </details>
+  </div>
+</div>
+<div id="menu" class="menu" style="display:none"></div>
+
+<script>
+// ===================== ДАННЫЕ =====================
+const P={
+ 1:{n:'Печенье',e:'🍪',lv:1},2:{n:'Тост',e:'🍞',lv:2},3:{n:'Пудинг',e:'🍮',lv:3},
+ 4:{n:'Шоколадный кекс',e:'🍫',lv:4},5:{n:'Капкейк',e:'🧁',lv:5},6:{n:'Кусочек торта',e:'🍰',lv:6},
+ 7:{n:'Клубничный торт',e:'🎂',lv:7},8:{n:'Роскошный торт',e:'🎂',lv:8,badge:'✨'},
+ 12:{n:'Чай Китти (котик в чашке)',e:'🍵',lv:1,tea:1},13:{n:'Китти-парфе',e:'🍨',lv:2,tea:1},14:{n:'Чайный домик Китти',e:'🏡',lv:3,tea:1},
+ 15:{n:'Чёрный чай (кружка с цветком)',e:'🫖',junk:1},
+ 10:{n:'Белый котик-повар (ложка)',e:'🐱',cat:1},11:{n:'Рыжий котик (вилка, прищур)',e:'😼',cat:1},
+ 20:{n:'Столовые приборы',e:'🍴',tool:1},21:{n:'Духовка (джокер)',e:'📺',tool:1}
+};
+const BOARD_IDS=[1,2,3,4,5,6,7,8,12,13,14,15,10,11];
+const CUR_IDS=[1,2,3,4,12,10,11,20,21];
+const NEXT={1:2,2:3,3:4,4:5,5:6,6:7,7:8,12:13,13:14};
+let PTS={2:4,3:20,4:50,5:150,6:500,7:1500,8:5000,13:100,14:500};
+try{const p=JSON.parse(localStorage.getItem('tth_pts')||'null');if(p)Object.assign(PTS,p)}catch(e){}
+const W={1:4,2:9,3:16,4:26,5:40,6:60,7:90,12:5,13:12};
+const MAT={1:3,2:10,3:30,4:90,5:270,6:800,7:2400,8:7000,12:4,13:15,14:50,15:-6,10:-10,11:-18};
+const BANK={1:2,2:8,3:20,4:35,5:50,6:70,7:100,12:4,13:10,20:12,21:12,10:-20,11:-30,15:-5};
+
+const PRIOR={1:60,2:15,3:2,4:0.4,10:15,11:3,20:1.5,21:2.5};
+let FREQ={};try{FREQ=JSON.parse(localStorage.getItem('tth_freq')||'{}')||{}}catch(e){}
+let PL=[],PSUM=1,countedId=0;
+function rebuildPL(){const ps=Object.values(PRIOR).reduce((a,b)=>a+b,0),K=40;
+ PL=Object.keys(PRIOR).map(k=>[+k,PRIOR[k]/ps*K+(FREQ[k]||0)]);
+ for(const k in FREQ)if(!(k in PRIOR)&&FREQ[k]>0)PL.push([+k,FREQ[k]]);
+ PSUM=PL.reduce((a,[,v])=>a+v,0)}
+rebuildPL();
+function countPiece(id){
+ if(countedId)FREQ[countedId]=Math.max(0,(FREQ[countedId]||0)-1);
+ FREQ[id]=(FREQ[id]||0)+1;countedId=id;
+ try{localStorage.setItem('tth_freq',JSON.stringify(FREQ))}catch(e){}
+ rebuildPL();renderFreq()}
+function renderFreq(){const el=document.getElementById('freqInfo');if(!el)return;
+ const n=Object.values(FREQ).reduce((a,b)=>a+b,0);
+ el.innerHTML=PL.slice().sort((a,b)=>b[1]-a[1]).map(([id,v])=>`${E(id)} ${(v/PSUM*100).toFixed(v/PSUM<0.1?1:0)}%`).join(' · ')+
+  `<br>Увидел иконок: <b>${n}</b>${n<100?' (пока мало — шансы ещё близки к догадке)':''}`}
+
+const WT={mat:1,pair:1,dead:0.6,edge:1,space:5,crowd:2,cat:1,split:0.4};
+try{['tth_wt','tth_bgtune','tth_currect','tth_curmem'].forEach(k=>localStorage.removeItem(k))}catch(e){}
+const SEARCH=[null,{ms:600,depth:10,top:8},{ms:1500,depth:14,top:10}];
+let deepLevel=1;try{const d=localStorage.getItem('tth_deep');if(d!==null)deepLevel=+d}catch(e){}
+const cfg={store:true};
+
+let S=null;
+try{const s=JSON.parse(localStorage.getItem('tth_state')||'null');if(s&&s.b&&s.b.length===36)S=s}catch(e){}
+if(!S)S={b:Array(36).fill(0),cur:0,score:0,glow:-1};
+if(S.glow==null)S.glow=-1;
+let undo=[],AN=[],CELLS=[],HOV=-1,DEEP=null;
+let MISC=new Array(36).fill(0),SEEN=new Array(36).fill(null),SHOWOV=true,tickN=0;
+try{SHOWOV=localStorage.getItem('tth_ov')!=='0'}catch(e){}
+
+const $=id=>document.getElementById(id);
+const isStore=i=>cfg.store&&i===0;
+const E=id=>id&&P[id]?P[id].e+(P[id].badge||''):'';
+const rc=i=>[i/6|0,i%6];
+const cellName=i=>{const[r,c]=rc(i);return `ряд ${r+1}, кол. ${c+1}`};
+const isEdge=i=>{const[r,c]=rc(i);return r===0||r===5||c===0||c===5};
+const isCorner=i=>{const[r,c]=rc(i);return (r===0||r===5)&&(c===0||c===5)};
+const dist=(a,b)=>{const[r1,c1]=rc(a),[r2,c2]=rc(b);return Math.abs(r1-r2)+Math.abs(c1-c2)};
+const isCat=x=>x===10||x===11;
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function rollPieceR(R){let s=R()*PSUM;for(const[id,p]of PL){if((s-=p)<0)return id}return 1}
+
+let NB=[];
+(function(){for(let i=0;i<36;i++){const[r,c]=rc(i),a=[];
+ if(r>0)a.push(i-6);if(r<5)a.push(i+6);if(c>0)a.push(i-1);if(c<5)a.push(i+1);
+ NB.push(a.filter(j=>!isStore(j)))}})();
+
+// ===================== ПРАВИЛА =====================
+function group(b,i,t){const out=[i],seen=new Set([i]);
+ for(let k=0;k<out.length;k++)for(const j of NB[out[k]])if(!seen.has(j)&&b[j]===t){seen.add(j);out.push(j)}
+ return out}
+function mergeAt(b,i,ev){let pts=0;
+ while(true){const t=b[i],nx=NEXT[t];if(!nx)break;
+  const g=group(b,i,t);if(g.length<3)break;
+  for(const c of g)b[c]=0;b[i]=nx;
+  const p=Math.round((PTS[nx]||0)*(1+0.5*(g.length-3)));pts+=p;
+  if(ev)ev.push({k:'merge',from:t,to:nx,n:g.length,p,cells:g})}
+ return pts}
+function trapCats(b,ref,ev){let pts=0;const seen=new Set(),tea=[];
+ for(let i=0;i<36;i++){if(isStore(i)||b[i]!==10||seen.has(i))continue;
+  const g=group(b,i,10);g.forEach(c=>seen.add(c));
+  if(!g.some(c=>NB[c].some(j=>b[j]===0))){g.forEach(c=>{b[c]=12;tea.push(c)});if(ev)ev.push({k:'trap',n:g.length,cells:g})}}
+ tea.sort((a,c)=>dist(a,ref)-dist(c,ref));
+ for(const c of tea)if(b[c]===12)pts+=mergeAt(b,c,ev);
+ return pts}
+function simulate(b,i,piece,noEv){let nb=b.slice(),ev=noEv?null:[],pts=0;
+ if(isStore(i))return null;
+ if(piece===20){const t=nb[i];if(!t)return null;
+  if(isCat(t)){nb[i]=12;if(ev)ev.push({k:'cut',t});pts+=mergeAt(nb,i,ev)}
+  else{nb[i]=0;if(ev)ev.push({k:'del',t,cells:[i]})}}
+ else if(piece===21){if(nb[i])return null;let best=null;
+  for(const t of[1,2,3,4,5,6,7,12,13]){if(!NB[i].some(j=>nb[j]===t))continue;
+   const tb=nb.slice(),tev=ev?[]:null;tb[i]=t;const p=mergeAt(tb,i,tev);
+   if(tb[i]!==t){const top=tb[i];if(!best||p>best.p||(p===best.p&&top>best.top))best={t,p,tb,tev,top}}}
+  if(best){nb=best.tb;if(ev){ev.push({k:'oven',t:best.t});ev.push(...best.tev)}pts+=best.p}
+  else{nb[i]=15;if(ev)ev.push({k:'black'})}}
+ else{if(nb[i])return null;nb[i]=piece;pts+=mergeAt(nb,i,ev)}
+ pts+=trapCats(nb,i,ev);
+ return{b:nb,pts,ev}}
+function moveCatsR(b,R){const cats=[];for(let i=0;i<36;i++)if(!isStore(i)&&isCat(b[i]))cats.push(i);
+ for(const i of cats){const t=b[i];
+  if(t===10){const e=NB[i].filter(j=>!b[j]);if(e.length){b[e[Math.floor(R()*e.length)]]=10;b[i]=0}}
+  else if(t===11){const e=[];for(let j=0;j<36;j++)if(!isStore(j)&&!b[j])e.push(j);if(e.length){b[e[Math.floor(R()*e.length)]]=11;b[i]=0}}}}
+const empties=b=>{let n=0;for(let i=0;i<36;i++)if(!isStore(i)&&!b[i])n++;return n};
+
+// ===================== ОЦЕНКА ПОЛЯ =====================
+function evalBoard(b){let s=0,emp=0;const comp=new Int16Array(36).fill(-1),sz=[];let k=0;
+ for(let i=0;i<36;i++){if(isStore(i))continue;const t=b[i];
+  if(!t){emp++;continue}
+  s+=WT.mat*(MAT[t]||0);
+  if(t===10){s-=WT.cat*(4+NB[i].filter(j=>!b[j]).length*1.5);continue}
+  if(t===11){s-=WT.cat*12;continue}
+  if(t===15){s-=8;continue}
+  if(comp[i]>=0||!P[t])continue;
+  const g=group(b,i,t),fs=new Set();
+  for(const c of g){comp[c]=k;for(const j of NB[c])if(!b[j])fs.add(j)}
+  sz.push(g.length);k++;
+  if(NEXT[t]){if(g.length>=2)s+=WT.pair*W[t]*(fs.size?1:0.25);else if(!fs.size)s-=WT.dead*W[t]}
+  const lv=P[t].lv||0;
+  if(!P[t].tea&&lv>=3)for(const c of g){if(isCorner(c))s+=WT.edge*lv*2.5;else if(isEdge(c))s+=WT.edge*lv*1.2;else s-=WT.edge*lv*0.8}}
+ for(let e=0;e<36;e++){if(isStore(e)||b[e])continue;const seenC=[],byT={};
+  for(const j of NB[e]){const t=b[j];if(!NEXT[t])continue;const c=comp[j];if(seenC.includes(c))continue;seenC.push(c);(byT[t]=byT[t]||[]).push(sz[c])}
+  for(const t in byT)if(byT[t].length>=2)s+=WT.split*W[t]}
+ s+=emp*WT.space;if(emp<8)s-=(8-emp)*(8-emp)*WT.crowd;if(emp===0)s-=400;
+ return s}
+function candidates(b,piece){const a=[];for(let i=0;i<36;i++){if(isStore(i))continue;if(piece===20?b[i]:!b[i])a.push(i)}return a}
+function best1(b,piece){let m=-Infinity;
+ for(const i of candidates(b,piece)){const r=simulate(b,i,piece,true);const v=r.pts+evalBoard(r.b);if(v>m)m=v}
+ if(m===-Infinity)return piece===20?evalBoard(b):evalBoard(b)-1000;return m}
+function expectNext(b){let s=0;for(const[id,p]of PL)s+=p/PSUM*best1(b,id);return s}
+function analyze(){const b=S.b,cur=S.cur,res=[];if(!cur)return res;
+ const bankNow=cfg.store?(BANK[b[0]]||0):0;
+ for(const i of candidates(b,cur)){const r=simulate(b,i,cur);res.push({i,r,v:r.pts+expectNext(r.b)+bankNow})}
+ if(cfg.store){
+  if(!b[0]){const nb=b.slice();nb[0]=cur;res.push({i:0,store:'put',v:expectNext(nb)+(BANK[cur]||0)})}
+  else if(b[0]!==cur){const X=b[0],nb=b.slice();nb[0]=cur;let bv=-Infinity,bi=-1;
+   for(const j of candidates(nb,X)){const r=simulate(nb,j,X,true);const v=r.pts+expectNext(r.b);if(v>bv){bv=v;bi=j}}
+   if(bi>=0)res.push({i:0,store:'swap',X,then:bi,v:bv+(BANK[cur]||0)})}}
+ res.sort((a,c)=>c.v-a.v);return res}
+
+// ===================== БЫСТРЫЕ ВООБРАЖАЕМЫЕ ПАРТИИ =====================
+function toolUse(b,p){
+ if(p===20){let tgt=-1;
+  for(const want of[11,10,15]){for(let i=1;i<36;i++)if(b[i]===want){tgt=i;break}if(tgt>=0)break}
+  return tgt<0?null:simulate(b,tgt,20,true)}
+ let best=null;
+ for(let i=1;i<36;i++){if(b[i])continue;if(!NB[i].some(j=>NEXT[b[j]]))continue;
+  const r=simulate(b,i,21,true);if(r&&r.pts>0&&(!best||r.pts>best.pts))best=r}
+ return best}
+function placeQuick(b,p){let best=-1,bs=-1e9,merge=null;
+ for(let i=1;i<36;i++){if(b[i])continue;
+  let emp=0,same=0;const seen=[];
+  for(const j of NB[i]){const t=b[j];if(!t){emp++;continue}
+   if(t===p&&!seen.includes(j)){const g=group(b,j,p);for(const x of g)seen.push(x);same+=g.length}}
+  let s;
+  if(NEXT[p]&&same>=2){const r=simulate(b,i,p,true);s=100000+r.pts;if(s>bs){bs=s;best=i;merge=r}continue}
+  if(p===10)s=-emp*10;
+  else if(p===11)s=(isCorner(i)?6:isEdge(i)?3:0)-emp;
+  else{s=same*20-emp*0.5;const lv=(P[p]&&P[p].lv)||0;
+   if(P[p]&&!P[p].tea&&lv>=3)s+=isCorner(i)?lv*3:isEdge(i)?lv:0;
+   for(const j of NB[i]){const t=b[j];if(t&&t!==p&&NEXT[t]&&NB[j].some(q=>q!==i&&b[q]===t))s-=4}}
+  if(s>bs){bs=s;best=i;merge=null}}
+ if(best<0)return null;
+ return merge||simulate(b,best,p,true)}
+function quickPlace(b,p){const tray=b[0];
+ if(tray===20&&p!==20){let c=-1;for(let i=1;i<36;i++)if(b[i]===11){c=i;break}
+  if(c>=0){const nb=b.slice();nb[0]=p;return simulate(nb,c,20,true)}}
+ if(tray===21&&p!==21&&!isCat(p)){const nb=b.slice();nb[0]=p;const u=toolUse(nb,21);if(u&&u.pts>=(PTS[3]||20))return u}
+ if(p===20||p===21){const u=toolUse(b,p);if(u)return u;
+  if(!tray){const nb=b.slice();nb[0]=p;return{b:nb,pts:0}}
+  if(p===20){let c=-1,m=1e9;for(let i=1;i<36;i++)if(b[i]&&(MAT[b[i]]||0)<m){m=MAT[b[i]]||0;c=i}return c<0?null:simulate(b,c,20,true)}
+  let c=-1,m=99;for(let i=1;i<36;i++)if(!b[i]){let n=0;for(const j of NB[i])if(!b[j])n++;if(n<m){m=n;c=i}}
+  return c<0?null:simulate(b,c,21,true)}
+ return placeQuick(b,p)}
+function rolloutF(b,R,depth){let pts=0;
+ for(let d=0;d<depth;d++){const p=rollPieceR(R);
+  let emp=0;for(let i=1;i<36;i++)if(!b[i])emp++;
+  if(!emp&&p!==20)return pts-3000;
+  const r=quickPlace(b,p);if(!r)continue;
+  pts+=r.pts;b=r.b;moveCatsR(b,R)}
+ return pts+evalBoard(b)+(BANK[b[0]]||0)}
+function mcRun(j,ms){const t0=Date.now();
+ while(Date.now()-t0<ms){
+  for(let ci=0;ci<j.c.length;ci++){const R=mulberry32(j.seed+j.k*7919);const p=j.c[ci];const b=p.b.slice();moveCatsR(b,R);
+   j.acc[ci]+=p.pts+rolloutF(b,R,j.depth)}
+  j.k++}}
+function prepMove(m){
+ if(m.store==='put'){const b=S.b.slice();b[0]=S.cur;return{b,pts:0}}
+ if(m.store==='swap'){const nb=S.b.slice();nb[0]=S.cur;const r=simulate(nb,m.then,m.X,true);return{b:r.b,pts:r.pts}}
+ return{b:m.r.b,pts:m.r.pts}}
+function pickCands(set){const c=AN.slice(0,set.top);for(const m of AN)if(m.store&&!c.includes(m))c.push(m);
+ return{cands:c,rest:AN.filter(m=>!c.includes(m))}}
+
+$('selDepth').value=deepLevel;
+$('selDepth').onchange=e=>{deepLevel=+e.target.value;try{localStorage.setItem('tth_deep',deepLevel)}catch(err){}recalc()};
+$('bFreqReset').onclick=()=>{if(!confirm('Сбросить подсчёт выпавших иконок?'))return;FREQ={};countedId=0;try{localStorage.removeItem('tth_freq')}catch(e){}rebuildPL();renderFreq();recalc()};
+$('ovChk').checked=SHOWOV;
+$('ovChk').onchange=e=>{SHOWOV=e.target.checked;try{localStorage.setItem('tth_ov',SHOWOV?'1':'0')}catch(err){}drawCrop()};
+(function(){const el=$('ptsTab');for(const k of[2,3,4,5,6,7,8,13,14]){const d=document.createElement('label');
+ d.innerHTML=`→${E(k)} <input type="number" min="0" value="${PTS[k]}">`;
+ d.querySelector('input').onchange=e=>{PTS[k]=Math.max(0,+e.target.value||0);try{localStorage.setItem('tth_pts',JSON.stringify(PTS))}catch(err){}recalc()};
+ el.appendChild(d)}})();
+
+function reasons(m){const cur=S.cur;
+ if(m.store==='put')return[`тапни по подносу — ${E(cur)} уйдёт туда`];
+ if(m.store==='swap')return[`тапни по подносу: ${E(cur)} уйдёт туда, возьмёшь ${E(m.X)} — поставь его: ${cellName(m.then)}`];
+ const r=m.r,i=m.i,out=[];
+ if(i===S.glow)out.push('тапни прямо по мигающей иконке');
+ for(const e of r.ev){
+  if(e.k==='oven')out.push(`📺 станет ${E(e.t)}`);
+  else if(e.k==='black')out.push(`📺 станет 🫖 (плохо)`);
+  else if(e.k==='merge')out.push(`${E(e.from)}×${e.n} → ${E(e.to)}`);
+  else if(e.k==='trap')out.push(`котик заперт → ${E(12)}`);
+  else if(e.k==='cut')out.push(`${E(e.t)} → ${E(12)}`);
+  else if(e.k==='del')out.push(`убрать ${E(e.t)}`)}
+ if(!r.ev.some(e=>e.k==='merge')&&NEXT[cur]&&r.b[i]===cur&&group(r.b,i,cur).length===2)out.push(`пара ${E(cur)}${E(cur)}`);
+ out.push(`свободно ${empties(r.b)}`);return out}
+function moveInfo(i){let m=AN.find(a=>a.i===i);if(!m&&!isStore(i)&&S.cur){const r=simulate(S.b,i,S.cur);if(r)m={i,r}}return m||null}
+
+// ===================== ОТРИСОВКА =====================
+function render(){const bd=$('board');bd.innerHTML='';CELLS=[];const top=AN[0]?AN[0].i:-1;
+ for(let i=0;i<36;i++){const d=document.createElement('div');const[r,c]=rc(i);
+  d.className='cell'+((r+c)%2?' alt':'')+(isStore(i)?' store':(S.b[i]?' food':''));
+  if(i===top)d.classList.add('r1');
+  let inner=E(S.b[i]);
+  if(!S.b[i]&&i===S.glow&&!isStore(i)){d.classList.add('glow');inner=S.cur?E(S.cur):'✨'}
+  d.innerHTML=inner+(i===top?`<span class="rank">1</span>`:'');
+  d.onclick=()=>clickCell(i,d);
+  d.oncontextmenu=e=>{e.preventDefault();openMenu(i,e.pageX,e.pageY)};
+  d.onmouseenter=()=>{HOV=i;renderHint();drawCrop()};
+  d.onmouseleave=()=>{HOV=-1;renderHint();drawCrop()};
+  bd.appendChild(d);CELLS.push(d)}
+ $('cur').textContent=S.cur?E(S.cur):'❓';$('cur').classList.toggle('wait',!S.cur);
+ $('stor').textContent=cfg.store?E(S.b[0]):'—';
+ $('score').textContent=S.score;
+ renderPalette();renderHint();drawCrop();updLearn();status();
+ try{localStorage.setItem('tth_state',JSON.stringify(S))}catch(e){}}
+function renderPalette(){const pc=$('palCur');pc.innerHTML='';
+ CUR_IDS.forEach((id,k)=>{const d=document.createElement('div');d.className='pi';
+  d.innerHTML=E(id)+`<span class="key">${k+1}</span>`;d.title=P[id].n;
+  if(S.cur===id)d.classList.add('sel');
+  d.onclick=()=>{setNote('');setCur(id,true)};pc.appendChild(d)})}
+function renderHint(){const el=$('hint');
+ if(!empties(S.b)){el.innerHTML='<b>Поле заполнено — игра окончена.</b>';return}
+ if(!S.cur){el.innerHTML='';return}
+ if(!AN.length){el.innerHTML='Считаю…';return}
+ const cores=`ядер: ${WORKERS.length||1}`;
+ const tag=DEEP&&!DEEP.finished&&DEEP.total?`<span class="small">🧠 доигрываю партии… ${Math.round(DEEP.done/DEEP.total*100)}% (${DEEP.k||0} вариантов, ${cores})</span><br>`:(DEEP&&DEEP.finished?`<span class="small">🧠 расчёт готов (${DEEP.k} вариантов, ${cores})</span><br>`:'');
+ if(HOV>=0){const m=moveInfo(HOV);const k=m?AN.indexOf(m):-1;
+  el.innerHTML=tag+(m?`<b>${isStore(HOV)?'Поднос':cellName(HOV)}${k===0?' — лучший ход':''}:</b> ${reasons(m).join(' · ')}`:`${isStore(HOV)?'Поднос':cellName(HOV)}: сюда нельзя`);return}
+ const m=AN[0];el.innerHTML=tag+`<b>${m.store?'🍽 поднос':cellName(m.i)}:</b> ${reasons(m).join(' · ')}`}
+let calcTimer=null;
+function recalc(){AN=[];deepTok++;DEEP=null;stopWorkers();render();
+ if(S.cur){clearTimeout(calcTimer);calcTimer=setTimeout(()=>{AN=analyze();render();startDeep()},10)}}
+function refresh(){recalc();scheduleRef()}
+
+// ===================== ГЛУБОКИЙ РАСЧЁТ НА ЯДРАХ =====================
+let WORKERS=[],jobId=0,deepTok=0;
+function stopWorkers(){for(const w of WORKERS)w.postMessage({t:'stop'})}
+function startDeep(){const tok=++deepTok;DEEP=null;const set=SEARCH[deepLevel];
+ stopWorkers();
+ if(!set||AN.length<2)return;
+ const{cands,rest}=pickCands(set),prep=cands.map(prepMove);
+ const parts=[];const t0=performance.now();let lastDraw=0;
+ const update=final=>{let K=0;const sum=cands.map(()=>0);
+  for(const p of parts){if(!p)continue;K+=p.k;p.acc.forEach((a,ci)=>sum[ci]+=a)}
+  if(!K)return;
+  cands.forEach((c,ci)=>c.mc=sum[ci]/K);
+  AN=[...cands.slice().sort((a,b)=>b.mc-a.mc),...rest];
+  if(final){DEEP={finished:true,k:K};render();return}
+  DEEP={done:Math.min(performance.now()-t0,set.ms),total:set.ms,k:K};
+  if(performance.now()-lastDraw>400){lastDraw=performance.now();render()}else renderHint()};
+ if(WORKERS.length){const id=++jobId;let fin=0;
+  WORKERS.forEach((w,wi)=>{
+   w.onmessage=e=>{const m=e.data;if(m.id!==id||tok!==deepTok)return;
+    parts[wi]={acc:m.acc,k:m.k};if(m.done)fin++;update(fin>=WORKERS.length)};
+   w.postMessage({t:'sim',id,c:prep,depth:set.depth,ms:set.ms,seed:1000+wi*10000019,PTS,WT,PL,PSUM})})}
+ else{const j={c:prep,depth:set.depth,seed:1000,k:0,acc:prep.map(()=>0)};parts[0]=j;
+  const step=()=>{if(tok!==deepTok)return;mcRun(j,25);
+   const done=performance.now()-t0>=set.ms&&j.k>=20;update(done);if(!done)setTimeout(step,0)};
+  setTimeout(step,0)}}
+function initWorkers(){
+ const FN=[group,mergeAt,trapCats,simulate,moveCatsR,evalBoard,mulberry32,rollPieceR,toolUse,placeQuick,quickPlace,rolloutF,mcRun].map(f=>f.toString()).join('\n');
+ const HEAD='const P='+JSON.stringify(P)+',NEXT='+JSON.stringify(NEXT)+',W='+JSON.stringify(W)+',MAT='+JSON.stringify(MAT)+',BANK='+JSON.stringify(BANK)+',NB='+JSON.stringify(NB)+';\n'+
+ 'const cfg={store:true};const isStore=i=>i===0;const isCat=x=>x===10||x===11;const rc=i=>[i/6|0,i%6];\n'+
+ 'const dist=(a,b)=>{const[r1,c1]=rc(a),[r2,c2]=rc(b);return Math.abs(r1-r2)+Math.abs(c1-c2)};\n'+
+ 'const isEdge=i=>{const[r,c]=rc(i);return r===0||r===5||c===0||c===5};\n'+
+ 'const isCorner=i=>{const[r,c]=rc(i);return (r===0||r===5)&&(c===0||c===5)};\nlet PTS,WT,PL,PSUM;\n';
+ const SIM='let job=null;\n'+
+ 'onmessage=e=>{const m=e.data;if(m.t==="stop"){job=null;return}\n'+
+ ' if(m.t==="sim"){PTS=m.PTS;WT=m.WT;PL=m.PL;PSUM=m.PSUM;\n'+
+ '  const j={id:m.id,c:m.c,depth:m.depth,end:Date.now()+m.ms,seed:m.seed,k:0,acc:m.c.map(()=>0),last:0};job=j;setTimeout(()=>run(j),0)}};\n'+
+ 'function run(j){if(j!==job)return;mcRun(j,40);const done=Date.now()>=j.end&&j.k>=5;\n'+
+ ' if(done||Date.now()-j.last>300){j.last=Date.now();postMessage({id:j.id,acc:j.acc,k:j.k,done})}\n'+
+ ' if(done){job=null;return}setTimeout(()=>run(j),0)}\n';
+ const n=Math.max(1,Math.min(8,(navigator.hardwareConcurrency||4)-2));
+ try{const url=URL.createObjectURL(new Blob([HEAD+FN+SIM],{type:'text/javascript'}));
+  for(let k=0;k<n;k++)WORKERS.push(new Worker(url))}catch(e){WORKERS=[]}}
+
+// ---- меню правого клика ----
+function openMenu(i,x,y){const m=$('menu');
+ const btn=(v,html,t)=>`<div class="pi" data-v="${v}" title="${t}">${html}</div>`;
+ const glowRow=isStore(i)?'':`<div class="small" style="margin-top:8px"><b>✨ Здесь мигает то, что в руке:</b></div>
+  <div class="ggrid">${CUR_IDS.map(id=>`<div class="pi" data-g="${id}" title="${P[id].n}">${E(id)}</div>`).join('')}</div>`;
+ m.innerHTML=`<div class="small"><b>${isStore(i)?'Поднос':cellName(i)}</b> — что здесь в игре? (⬜ — стереть)</div>${glowRow}
+  <div class="small" style="margin-top:8px"><b>Лежит на поле:</b></div>
+  <div class="mgrid">${btn(0,'⬜','Пусто / стереть')}${BOARD_IDS.map(id=>btn(id,E(id),P[id].n)).join('')}
+  ${isStore(i)?btn(20,E(20),'Приборы на подносе')+btn(21,E(21),'Духовка на подносе'):''}</div>`;
+ m.style.left=Math.min(x,window.scrollX+innerWidth-330)+'px';m.style.top=y+'px';m.style.display='block';
+ m.querySelectorAll('[data-g]').forEach(el=>el.onclick=ev=>{ev.stopPropagation();const id=+el.dataset.g;pushUndo();
+  S.b[i]=0;S.glow=i;MISC[i]=0;SEEN[i]=null;closeMenu();setCur(id,true)});
+ m.querySelectorAll('[data-v]').forEach(el=>el.onclick=ev=>{ev.stopPropagation();const v=+el.dataset.v;pushUndo();
+  EDITED.add(i);MISC[i]=0;SEEN[i]=null;
+  S.b[i]=v;if(S.glow===i&&v)S.glow=-1;
+  closeMenu();setNote('');refresh()})}
+function closeMenu(){$('menu').style.display='none'}
+document.addEventListener('click',e=>{if(!$('menu').contains(e.target))closeMenu()});
+
+// ===================== ХОДЫ =====================
+function pushUndo(){undo.push(JSON.stringify(S));if(undo.length>300)undo.shift()}
+function bad(d){if(!d)return;d.classList.remove('bad');void d.offsetWidth;d.classList.add('bad')}
+let MANUAL=false;   // твой выбор того, что в руке, — держится до хода
+function setCur(id,manual){MANUAL=!!manual;S.cur=id;countPiece(id);if(manual)teachGlow(id);refresh()}
+function resetMism(){MISC.fill(0);SEEN.fill(null)}
+function placeAt(i){const r=simulate(S.b,i,S.cur);if(!r)return false;
+ S.b=r.b;S.score+=r.pts;S.cur=0;S.glow=-1;MANUAL=false;countedId=0;resetMism();refresh();return true}
+function tapStore(){pushUndo();countedId=0;resetMism();MANUAL=false;
+ if(!S.b[0]){S.b[0]=S.cur;S.cur=0;S.glow=-1}
+ else{const t=S.b[0];S.b[0]=S.cur;S.cur=t}
+ refresh()}
+function doBest(){if(!AN.length)return;const m=AN[0];
+ if(m.store==='put'){tapStore();return}
+ pushUndo();
+ if(m.store==='swap'){const X=S.b[0];S.b[0]=S.cur;S.cur=X;countedId=0;placeAt(m.then);return}
+ placeAt(m.i)}
+function clickCell(i,d){closeMenu();
+ if(!S.cur){bad(d);return}
+ if(isStore(i)){tapStore();return}
+ const r=simulate(S.b,i,S.cur);if(!r){bad(d);return}
+ pushUndo();placeAt(i)}
+
+// ===================== ЗАХВАТ =====================
+const video=document.createElement('video');video.muted=true;video.playsInline=true;
+let stream=null,capOn=false,capTimer=null,RECT=null,REF=null,refTimer=null,detKey='',detCnt=0,trayCnt=0;
+let DIFF=24,THR=30,NOTE='',NOTEWARN=false,synced=false,learnPaused=false,SAMPLES=[],GM=[],LASTV=null,PREVV=null,pendingLearn=false,popup=false,stableN=0;
+const EDITED=new Set();
+let selecting=false,drag=null,dragStart=null;
+try{const r=JSON.parse(localStorage.getItem('tth_rect')||'null');if(r)RECT=r}catch(e){}
+try{const d=+localStorage.getItem('tth_diff');if(d)DIFF=d}catch(e){}
+try{SAMPLES=JSON.parse(localStorage.getItem('tth_s3')||'[]')}catch(e){}
+try{GM=JSON.parse(localStorage.getItem('tth_glowmem')||'[]')}catch(e){}
+$('diff').value=DIFF;
+const saveRect=()=>{try{localStorage.setItem('tth_rect',JSON.stringify(RECT))}catch(e){}};
+const saveS=()=>{try{localStorage.setItem('tth_s3',JSON.stringify(SAMPLES))}catch(e){}};
+const saveGM=()=>{GM=GM.slice(-60);try{localStorage.setItem('tth_glowmem',JSON.stringify(GM))}catch(e){}};
+function setNote(t,warn){NOTE=t;NOTEWARN=!!warn;status()}
+function status(){const el=$('capMsg');let t='',w=false;
+ if(popup){t='⏳ Что-то закрывает поле — жду. Если поле просто новое — перечитаю его сам.';w=true}
+ else if(NOTE){t=NOTE;w=NOTEWARN}
+ else if(!capOn)t='Нажми «📷 Начать захват» и выбери окно игры.';
+ else if(!RECT)t='Нажми «Выделить поле» и обведи сетку 6×6 по краям клеток.';
+ else if(!synced){t='Нажми «📥 С картинки».';w=true}
+ else if(!S.cur){t='❓ Не понял, что в руке — нажми её слева в строке «✨» или клавишу 1–9.';w=!!REF}
+ else if(!REF)t='Смотрю…';
+ else t='👀 Слежу. Ходи в игре — я сам увижу ход.';
+ el.innerHTML=t;el.className=w?'warn':''}
+
+function showFull(v){$('full').style.display=v?'block':'none'}
+async function startCap(){
+ if(!navigator.mediaDevices||!navigator.mediaDevices.getDisplayMedia){setNote('Этот браузер не умеет захват экрана. Нужен Chrome или Edge на компьютере.',true);return}
+ try{stream=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:10,cursor:'never'},audio:false});
+  video.srcObject=stream;await video.play();
+  stream.getVideoTracks()[0].onended=stopCap;
+  capOn=true;$('bCap').textContent='Остановить захват';$('bRect').disabled=false;
+  showFull(!RECT);$('crop').style.display=RECT?'block':'none';
+  capTimer=setInterval(capTick,300);scheduleRef();status()}
+ catch(e){setNote('Захват не запущен: '+e.message,true)}}
+function stopCap(){capOn=false;clearInterval(capTimer);if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;REF=null;resetMism();
+ $('bCap').textContent='📷 Начать захват';$('bRect').disabled=true;showFull(false);$('crop').style.display='none';status()}
+$('bCap').onclick=()=>capOn?stopCap():startCap();
+const fc=$('full');
+$('bRect').onclick=()=>{selecting=true;showFull(true);drawFull();setNote('Обведи мышкой поле 6×6 по <b>внешним краям клеток</b> (зажми и тяни). Esc — отмена.')};
+function cpos(e,cv){const r=cv.getBoundingClientRect();return[(e.clientX-r.left)*cv.width/r.width,(e.clientY-r.top)*cv.height/r.height]}
+fc.onmousedown=e=>{if(!selecting)return;dragStart=cpos(e,fc);drag={x:dragStart[0],y:dragStart[1],w:0,h:0}};
+fc.onmousemove=e=>{if(!dragStart)return;const[p,q]=cpos(e,fc);
+ drag={x:Math.min(p,dragStart[0]),y:Math.min(q,dragStart[1]),w:Math.abs(p-dragStart[0]),h:Math.abs(q-dragStart[1])};drawFull()};
+fc.onmouseup=()=>{if(!dragStart)return;const k=fc.width/video.videoWidth;
+ if(drag.w>20&&drag.h>20){RECT={x:drag.x/k,y:drag.y/k,w:drag.w/k,h:drag.h/k};saveRect();$('crop').style.display='block';showFull(false);setNote('')}
+ dragStart=null;drag=null;selecting=false;resetMism();scheduleRef();capTick()};
+document.querySelectorAll('[data-n]').forEach(b=>b.onclick=()=>{if(!RECT)return;const s=Math.max(1,RECT.w/300);
+ const n=b.dataset.n;if(n==='x-')RECT.x-=s;if(n==='x+')RECT.x+=s;if(n==='y-')RECT.y-=s;if(n==='y+')RECT.y+=s;
+ if(n==='s-'){RECT.x+=s;RECT.y+=s;RECT.w-=2*s;RECT.h-=2*s}if(n==='s+'){RECT.x-=s;RECT.y-=s;RECT.w+=2*s;RECT.h+=2*s}
+ saveRect();resetMism();scheduleRef();capTick()});
+$('diff').oninput=e=>{DIFF=+e.target.value;try{localStorage.setItem('tth_diff',DIFF)}catch(err){}};
+$('bSync').onclick=()=>{synced=true;learnPaused=false;resetMism();setNote('');takeRef()};
+$('bForget').onclick=()=>{if(confirm('Забыть всю память? Потом придётся учить заново.')){SAMPLES=[];saveS();GM=[];saveGM();resetMism();updLearn();renderMem()}};
+
+function drawFull(){if(!video.videoWidth||fc.style.display==='none')return;const Wd=460,k=Wd/video.videoWidth;fc.width=Wd;fc.height=Math.round(video.videoHeight*k);
+ const x=fc.getContext('2d');x.drawImage(video,0,0,fc.width,fc.height);
+ const R=drag||(RECT&&{x:RECT.x*k,y:RECT.y*k,w:RECT.w*k,h:RECT.h*k});
+ if(R){x.strokeStyle='#ff6a00';x.lineWidth=2;x.strokeRect(R.x,R.y,R.w,R.h);x.lineWidth=1;x.beginPath();
+  for(let n=1;n<6;n++){x.moveTo(R.x+R.w*n/6,R.y);x.lineTo(R.x+R.w*n/6,R.y+R.h);x.moveTo(R.x,R.y+R.h*n/6);x.lineTo(R.x+R.w,R.y+R.h*n/6)}x.stroke()}}
+
+// ---- чтение картинки ----
+const SZ=32,rd=document.createElement('canvas');rd.width=rd.height=SZ*6;const rctx=rd.getContext('2d',{willReadFrequently:true});
+const TZ=64,td=document.createElement('canvas');td.width=td.height=TZ*6;const tctx=td.getContext('2d',{willReadFrequently:true});
+let HALO=new Array(36).fill(0),CTEX=new Array(36).fill(0);
+function grab(){rctx.drawImage(video,RECT.x,RECT.y,RECT.w,RECT.h,0,0,SZ*6,SZ*6);
+ const d=rctx.getImageData(0,0,SZ*6,SZ*6).data,vecs=[],RW=SZ*6;
+ for(let i=0;i<36;i++){const[r,c]=rc(i),ox=c*SZ,oy=r*SZ,v=[];
+  const blk=(x0,y0,n)=>{for(let y=0;y<n;y++)for(let x=0;x<n;x++){let R=0,G=0,B=0;
+   for(let dy=0;dy<2;dy++)for(let dx=0;dx<2;dx++){const o=((oy+y0+y*2+dy)*RW+ox+x0+x*2+dx)*4;R+=d[o];G+=d[o+1];B+=d[o+2]}
+   v.push(R/4,G/4,B/4)}};
+  blk(5,5,11);blk(10,10,6);vecs.push(v);
+  let s=0,n=0;
+  for(let t=0;t<SZ;t++)for(const q of[0,1,2,SZ-3,SZ-2,SZ-1]){
+   for(const[x,y]of[[t,q],[q,t]]){const o=((oy+y)*RW+ox+x)*4;s+=Math.min(d[o],d[o+1],d[o+2]);n++}}
+  HALO[i]=s/n}
+ texture();LASTV=vecs;
+ return vecs}
+function texture(){tctx.drawImage(video,RECT.x,RECT.y,RECT.w,RECT.h,0,0,TZ*6,TZ*6);
+ const d=tctx.getImageData(0,0,TZ*6,TZ*6).data,RW=TZ*6;
+ const L=(x,y)=>{const o=(y*RW+x)*4;return d[o]*0.3+d[o+1]*0.59+d[o+2]*0.11};
+ for(let i=0;i<36;i++){const[r,c]=rc(i),ox=c*TZ,oy=r*TZ;
+  let cs=0,cn=0;for(let y=20;y<44;y++)for(let x=20;x<44;x++){cs+=Math.abs(L(ox+x,oy+y)-L(ox+x+1,oy+y))+Math.abs(L(ox+x,oy+y)-L(ox+x,oy+y+1));cn+=2}
+  CTEX[i]=cs/cn}}
+const median=a=>{a=a.slice().sort((x,y)=>x-y);return a.length?a[a.length>>1]:null};
+function hasIcon(i){const emp=[];for(let k=0;k<36;k++)if(!isStore(k)&&!S.b[k])emp.push(CTEX[k]);
+ const base=median(emp);return CTEX[i]>(base===null?6:base*2.2+3)}
+// в центре клетки нет рисунка (ровный цвет) — клетка пустая
+function vecBlank(v){let s=0,s2=0,n=0;
+ for(let k=363;k<471;k+=3){const L=v[k]*0.3+v[k+1]*0.59+v[k+2]*0.11;s+=L;s2+=L*L;n++}
+ const m=s/n;return Math.sqrt(Math.max(0,s2/n-m*m))<6}
+
+function vd(a,b){let dA=0,dB=0;for(let k=0;k<363;k++){const q=a[k]-b[k];dA+=q*q}
+ for(let k=363;k<471;k++){const q=a[k]-b[k];dB+=q*q}return Math.sqrt((dA/363+2*dB/108)/3)}
+function nearest(v,st){
+ if(vecBlank(v))return{l:0,d:0,d2:1e9};
+ const m=new Map();
+ for(const x of SAMPLES){if(x.s!==st||x.l>=100)continue;const d=vd(v,x.v);if(!m.has(x.l)||d<m.get(x.l))m.set(x.l,d)}
+ let l=null,d=1e9,d2=1e9;for(const[k,dd]of m){if(dd<d){d2=d;d=dd;l=k}else if(dd<d2)d2=dd}
+ return{l,d,d2}}
+const confident=r=>r.l!==null&&r.d<THR&&r.d2>r.d*1.25;
+
+// ---- котики ----
+function emptyDist(v){let m=1e9;for(const x of SAMPLES)if(!x.s&&x.l===0){const d=vd(v,x.v);if(d<m)m=d}return m}
+function catAt(V,i){if(isStore(i)||i===S.glow)return 0;const r=nearest(V[i],false);return confident(r)&&isCat(r.l)?r.l:0}
+function catStrong(V,i){const c=catAt(V,i);if(!c)return 0;const r=nearest(V[i],false);
+ return(r.d<THR*0.8&&r.d<emptyDist(V[i])*0.6)?c:0}
+
+function badVec(v,l){
+ let s=0;for(let k=0;k<v.length;k++)s+=v[k];
+ if(s/v.length<140)return 'dark';
+ if(l===20||l===21)return null;
+ let n=0;
+ for(let p=0;p<157;p++){const r=v[p*3],g=v[p*3+1],b=v[p*3+2];
+  if(Math.max(r,g,b)-Math.min(r,g,b)<=6&&(r+g+b)/3>=140)n++}
+ return n>=2?'cursor':null}
+function cleanMemory(){let dark=0,cur=0,mix=0,cat=0,blank=0,old=0;
+ SAMPLES=SAMPLES.filter(x=>{if(!x.v||x.v.length!==471)return false;
+  if(x.l>=100){old++;return false}                        // старые снимки мигающих — больше не нужны
+  if(x.l>0&&vecBlank(x.v)){blank++;return false}
+  const b=badVec(x.v,x.l);
+  if(b==='dark'){dark++;return false}if(b==='cursor'){cur++;return false}return true});
+ const emptyS=SAMPLES.filter(y=>y.l===0);
+ SAMPLES=SAMPLES.filter(x=>{if(!isCat(x.l))return true;
+  for(const y of emptyS)if(y.s===x.s&&vd(x.v,y.v)<25){cat++;return false}
+  return true});
+ const drop=new Set();
+ SAMPLES.forEach((x,i)=>{let dS=1e9,dO=1e9,nS=0;
+  SAMPLES.forEach((y,j)=>{if(i===j||y.s!==x.s)return;const d=vd(x.v,y.v);
+   if(y.l===x.l){nS++;if(d<dS)dS=d}else if(d<dO)dO=d});
+  if(nS>=2&&dO<12&&dO<dS*0.5)drop.add(i)});
+ if(drop.size){SAMPLES=SAMPLES.filter((x,i)=>!drop.has(i));mix=drop.size}
+ const n=dark+cur+mix+cat+blank;if(n+old)saveS();
+ return{n,dark,cur,mix,cat,blank}}
+function cleanMsg(r){return r.n?`🧹 Почистил память: убрал ${r.n} (пустая клетка под видом иконки — ${r.blank}, котик вместо пустой — ${r.cat}, курсор мыши — ${r.cur}, затемнённый экран — ${r.dark}, чужая подпись — ${r.mix}).`:'🧹 Память чистая, мусора не нашёл.'}
+
+// ===================== МИГАЮЩАЯ ИКОНКА (то, что в руке) =====================
+// ГДЕ: клетка, пустая у тренера, но с рисунком на картинке (или с ярко-белой каймой)
+function locateActive(V){
+ const inner=[],edge=[];for(let i=1;i<36;i++)(isEdge(i)?edge:inner).push(HALO[i]);
+ const mi=median(inner),me=median(edge),hv=i=>HALO[i]-(isEdge(i)?me:mi);
+ let hb=-1,h1=0,h2=0;for(let i=1;i<36;i++){const v=hv(i);if(v>h1){h2=h1;h1=v;hb=i}else if(v>h2)h2=v}
+ const strong=(h1>14&&h1>h2+7)?hb:-1;
+ const ok=i=>{if(i<1||vecBlank(V[i]))return false;
+  if(S.b[i])return i===strong&&!isCat(S.b[i])&&(!S.cur||S.b[i]===S.cur);   // мигающую приняли за лежащую
+  const r=nearest(V[i],false);if(confident(r)&&isCat(r.l)&&i!==strong)return false;   // забежавший кот
+  return true};
+ if(S.glow>=1&&ok(S.glow))return S.glow;        // держу, пока подходит — без прыжков
+ if(strong>=1&&ok(strong))return strong;
+ let best=-1,bv=0;for(let i=1;i<36;i++){if(!ok(i))continue;if(CTEX[i]>bv){bv=CTEX[i];best=i}}
+ return best}
+function trackActive(V){const g=locateActive(V);
+ if(g<1||g===S.glow)return;
+ const had=S.b[g];S.b[g]=0;S.glow=g;MISC[g]=0;SEEN[g]=null;
+ if(had)recalc();else render()}
+
+// ЧТО: прикладываю середину мигающей клетки к иконкам на поле и подносе в 8 размерах
+const GN=28,GKS=[0.75,0.85,0.95,1.05,1.15,1.25,1.35,1.5];
+function gnorm(a){const P2=GN*GN,m=[0,0,0];
+ for(let p=0;p<P2;p++){m[0]+=a[p*3];m[1]+=a[p*3+1];m[2]+=a[p*3+2]}
+ for(let c=0;c<3;c++)m[c]/=P2;
+ let s=0;for(let p=0;p<P2*3;p++){const q=a[p]-m[p%3];s+=q*q}
+ const sd=Math.sqrt(s/(P2*3))||1,o=new Float32Array(P2*3);
+ for(let p=0;p<P2*3;p++)o[p]=(a[p]-m[p%3])/sd;return o}
+function gwin(d,i,k){const RW=TZ*6,[r,c]=rc(i),cx=c*TZ+TZ/2,cy=r*TZ+TZ/2,a=new Float32Array(GN*GN*3);
+ for(let y=0;y<GN;y++)for(let x=0;x<GN;x++){
+  const sx=Math.min(RW-1,Math.max(0,Math.round(cx+(x-GN/2+0.5)*k))),sy=Math.min(RW-1,Math.max(0,Math.round(cy+(y-GN/2+0.5)*k)));
+  const o=(sy*RW+sx)*4,p=(y*GN+x)*3;a[p]=d[o];a[p+1]=d[o+1];a[p+2]=d[o+2]}
+ return gnorm(a)}
+const gdst=(a,b)=>{let s=0;for(let p=0;p<a.length;p++){const q=a[p]-b[p];s+=q*q}return s/a.length};
+function guessActive(g){const d=tctx.getImageData(0,0,TZ*6,TZ*6).data,ws=GKS.map(k=>gwin(d,g,k)),best={};
+ const add=(l,t)=>{for(const w of ws){const v=gdst(w,t);if(best[l]===undefined||v<best[l])best[l]=v}};
+ for(let i=0;i<36;i++){if(i===g||!S.b[i]||!CUR_IDS.includes(S.b[i]))continue;add(S.b[i],gwin(d,i,1))}
+ for(const x of GM)add(x.l,Float32Array.from(x.w));
+ const arr=Object.entries(best).sort((a,b)=>a[1]-b[1]);if(!arr.length)return null;
+ return{l:+arr[0][0],d:arr[0][1],l2:arr[1]?+arr[1][0]:null,d2:arr[1]?arr[1][1]:9}}
+let gl=null,gn=0;
+function guessTick(V){const el=$('glowInfo'),g=S.glow;
+ if(g<1||S.b[g]){el.textContent='✨ В руке: не вижу мигающую клетку';gn=0;return}
+ const r=guessActive(g);
+ if(!r){el.textContent='✨ В руке: не с чем сравнить — выбери слева';gn=0;return}
+ const ok=r.d<0.6&&r.d2>r.d*1.25;
+ let t=`✨ В руке: ${E(r.l)} (${r.d.toFixed(2)})`+(ok?'':` — не уверен, похоже и на ${E(r.l2)} (${r.d2.toFixed(2)})`);
+ if(MANUAL&&S.cur)t+=` · держу твой выбор ${E(S.cur)}`;
+ el.textContent=t;
+ if(!ok||(MANUAL&&S.cur)){gn=0;return}
+ if(r.l===gl)gn++;else{gl=r.l;gn=1}
+ if(gn<2||S.cur===r.l)return;
+ for(let i=0;i<36;i++){if(i===g||isCat(S.b[i]))continue;if(vd(V[i],REF[i])>DIFF)return}   // идёт ход — не мешаю
+ setCur(r.l,false)}
+// твой выбор — запоминаю мигающую иконку, чтобы в следующий раз узнать её сам
+function teachGlow(id){if(!capOn||!RECT||!LASTV)return;
+ const g=S.glow;if(g<1||S.b[g]||vecBlank(LASTV[g]))return;
+ const d=tctx.getImageData(0,0,TZ*6,TZ*6).data,w=gwin(d,g,1);
+ GM=GM.filter(x=>x.l===id||gdst(Float32Array.from(x.w),w)>0.15);
+ GM.push({l:id,w:Array.from(w,v=>Math.round(v*100)/100)});saveGM();updLearn()}
+
+// ===================== СВЕРКА С КАРТИНКОЙ =====================
+// несколько раз подряд уверенно вижу в клетке другое — ставлю то, что вижу
+function checkMismatch(V){if(!REF||popup)return;
+ let fixed=false;
+ for(let i=0;i<36;i++){const st=isStore(i),exp=S.b[i]||0;
+  if((!st&&i===S.glow)||badVec(V[i],0)){MISC[i]=0;SEEN[i]=null;continue}
+  const r=nearest(V[i],st);
+  if(confident(r)&&r.l!==exp){if(SEEN[i]===r.l)MISC[i]++;else{SEEN[i]=r.l;MISC[i]=1}}
+  else{MISC[i]=0;SEEN[i]=null}
+  if(MISC[i]>=3){
+   if(!st&&isCat(SEEN[i])&&!catStrong(V,i)){MISC[i]=0;SEEN[i]=null;continue}
+   S.b[i]=SEEN[i];MISC[i]=0;SEEN[i]=null;fixed=true}}
+ if(fixed)recalc()}
+
+function addSample(v,l,s){const nv=v.map(Math.round);
+ if(l>=100||badVec(nv,l))return false;
+ if(l>0&&vecBlank(nv))return false;
+ if(l===0&&!s&&!vecBlank(nv))return false;
+ for(const x of SAMPLES)if(x.s===s&&x.l===l&&vd(x.v,nv)<5)return false;
+ SAMPLES=SAMPLES.filter(x=>{if(x.l===0||x.s!==s||x.l===l)return true;return vd(x.v,nv)>=8});
+ SAMPLES.push({l,v:nv,s});
+ const same=SAMPLES.filter(x=>x.l===l&&x.s===s);if(same.length>30)SAMPLES.splice(SAMPLES.indexOf(same[0]),1);
+ return true}
+function labelOf(i){const st=isStore(i),l=S.b[i];
+ if(!st&&i===S.glow)return undefined;
+ if(!st&&!l&&S.glow<0)return undefined;
+ return l}
+function tryLearn(V){if(!pendingLearn||!synced||learnPaused||!PREVV||popup)return;
+ for(let i=0;i<36;i++){if(i===S.glow||isCat(S.b[i]))continue;if(vd(V[i],PREVV[i])>6)return}
+ let dk=0;for(let i=0;i<36;i++)if(badVec(V[i],0)==='dark')dk++;
+ if(dk>8){pendingLearn=false;return}
+ let dis=0;
+ for(let i=0;i<36;i++){const l=labelOf(i);if(l===undefined||EDITED.has(i))continue;
+  const r=nearest(V[i],isStore(i));if(confident(r)&&r.l!==l)dis++}
+ if(dis>6){pendingLearn=false;return}
+ let n=0;
+ for(let i=0;i<36;i++){const l=labelOf(i);if(l===undefined)continue;const st=isStore(i);
+  if(badVec(V[i],l))continue;
+  if(!EDITED.has(i)){const r=nearest(V[i],st);
+   if(confident(r)&&r.l!==l)continue;
+   if(isCat(l)&&!(confident(r)&&r.l===l))continue}
+  if(addSample(V[i],l,st))n++}
+ pendingLearn=false;EDITED.clear();
+ if(n){saveS();renderMem();updLearn()}}
+function updLearn(){const known=new Set(SAMPLES.filter(x=>x.l>0&&x.l<100).map(x=>x.l));
+ const gm={};GM.forEach(x=>gm[x.l]=(gm[x.l]||0)+1);
+ $('learnInfo').innerHTML=`🧠 <b>Выучил на поле:</b> ${[...known].map(E).join(' ')||'пока ничего'}<br>✨ <b>Запомнил в руке (твои правки):</b> ${Object.keys(gm).map(k=>E(+k)+'<span class="small">×'+gm[k]+'</span>').join(' ')||'пока нет — то, что лежит на поле, узнаю и без этого'}${learnPaused?'<br>⏸ <b>Обучение на паузе</b> до «🔄 Поле совпадает»':''}`}
+function thumb(v){const c=document.createElement('canvas');c.width=c.height=11;c.className='th';const x=c.getContext('2d');const im=x.createImageData(11,11);
+ for(let p=0;p<121;p++){im.data[p*4]=v[p*3];im.data[p*4+1]=v[p*3+1];im.data[p*4+2]=v[p*3+2];im.data[p*4+3]=255}
+ x.putImageData(im,0,0);return c}
+function memName(l,s){if(l===0)return s?'пустой поднос':'пусто';return E(l)+(s?' (поднос)':'')}
+function renderMem(){if(!$('memDet').open)return;const el=$('memList');el.innerHTML='';
+ const keys=[...new Set(SAMPLES.map(x=>x.l+'|'+(x.s?1:0)))].sort((a,b)=>{const[la,sa]=a.split('|').map(Number),[lb,sb]=b.split('|').map(Number);return sa-sb||la-lb});
+ if(!keys.length){el.innerHTML='<div class="small">Пока пусто.</div>';return}
+ for(const key of keys){const[l,s]=key.split('|').map(Number);const st=!!s;
+  const row=document.createElement('div');row.className='memRow';
+  row.innerHTML=`<span class="memL">${memName(l,st)}</span>`;
+  SAMPLES.filter(x=>x.l===l&&!!x.s===st).forEach(x=>{const t=thumb(x.v);t.title='Клик — удалить этот образец';
+   t.onclick=()=>{const k=SAMPLES.indexOf(x);if(k>=0)SAMPLES.splice(k,1);saveS();
+    learnPaused=true;pendingLearn=false;resetMism();
+    setNote('Удалил. Обучение на паузе — поправь поле, потом «🔄 Поле совпадает».',true);
+    renderMem();updLearn()};row.appendChild(t)});
+  el.appendChild(row)}}
+$('memDet').addEventListener('toggle',renderMem);
+$('bExp').onclick=()=>{const blob=new Blob([JSON.stringify({v:3,SAMPLES,PTS,FREQ,GM})],{type:'application/json'});
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='tea-house-memory.json';document.body.appendChild(a);a.click();a.remove()};
+$('bClean').onclick=()=>{const r=cleanMemory();resetMism();updLearn();renderMem();setNote(cleanMsg(r),!!r.n)};
+$('fImp').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
+ r.onload=()=>{try{const d=JSON.parse(r.result);if(!Array.isArray(d.SAMPLES))throw 0;SAMPLES=d.SAMPLES;
+  if(d.PTS){Object.assign(PTS,d.PTS);try{localStorage.setItem('tth_pts',JSON.stringify(PTS))}catch(err){}}
+  if(d.FREQ){FREQ=d.FREQ;try{localStorage.setItem('tth_freq',JSON.stringify(FREQ))}catch(err){}rebuildPL();renderFreq()}
+  if(Array.isArray(d.GM)){GM=d.GM;saveGM()}
+  const cr=cleanMemory();saveS();resetMism();
+  updLearn();renderMem();setNote('Память загружена. '+cleanMsg(cr),!!cr.n);recalc()}catch(err){setNote('Не получилось прочитать файл памяти.',true)}};
+ r.readAsText(f);e.target.value=''};
+
+function scheduleRef(){REF=null;detKey='';detCnt=0;trayCnt=0;clearTimeout(refTimer);refTimer=setTimeout(takeRef,700)}
+function takeRef(){refTimer=null;if(!(capOn&&RECT&&video.videoWidth)){status();return}
+ const V=grab();REF=V;detKey='';detCnt=0;popup=false;
+ if(!synced){status();drawCrop();return}
+ trackActive(V);
+ let fixed=false;
+ if(cfg.store&&!learnPaused&&!EDITED.has(0)&&!badVec(V[0],0)){const r=nearest(V[0],true);if(confident(r)&&r.l!==S.b[0]){S.b[0]=r.l;fixed=true}}
+ pendingLearn=true;
+ if(fixed)recalc();else render()}
+
+function detect(V){
+ if(!REF||!synced)return;
+ const C=new Set();for(let i=0;i<36;i++)if(vd(V[i],REF[i])>DIFF)C.add(i);
+ if(C.size>=12){popup=true;detKey='';detCnt=0;status();return}
+ if(popup){popup=false;status()}
+ let real=0;for(const k of C)if(!(isCat(S.b[k])&&catAt(V,k)))real++;
+ if(real<2&&!C.has(0)){detKey='';detCnt=0;return}
+ let key=null,best=null;
+ if(cfg.store&&C.has(0))key='store';
+ else{
+  const rankOf=i=>{const k=AN.findIndex(m=>m.i===i&&!m.store);return k<0?99:k};
+  for(const i of candidates(S.b,S.cur)){if(!C.has(i))continue;const r=simulate(S.b,i,S.cur,true);
+   const pred=[];for(let k=0;k<36;k++)if(r.b[k]!==S.b[k])pred.push(k);
+   if(pred.some(k=>!C.has(k)))continue;
+   const sc=pred.length*10-rankOf(i)*0.5;
+   if(!best||sc>best.sc)best={i,sc,pred}}
+  if(best)key='c'+best.i}
+ if(!key){detKey='';detCnt=0;setNote('Поле в игре изменилось, но я не понял как — дождусь, пока картинка успокоится, и перечитаю поле сам.',true);return}
+ if(key===detKey)detCnt++;else{detKey=key;detCnt=1}
+ if(detCnt<2)return;
+ detKey='';detCnt=0;setNote('');
+ if(key==='store'){tapStore();return}
+ pushUndo();
+ const r=simulate(S.b,best.i,S.cur);S.b=r.b;S.score+=r.pts;S.cur=0;S.glow=-1;MANUAL=false;countedId=0;resetMism();
+ const arr=[];for(const k of C){if(isStore(k)||best.pred.includes(k)||S.b[k]||catAt(V,k))continue;if(hasIcon(k))arr.push(k)}
+ if(arr.length===1)S.glow=arr[0];
+ refresh()}
+
+// поднос: уверенно вижу, что там, — ставлю; не уверен — не трогаю
+function checkTray(V){if(!REF||!synced||!cfg.store)return;
+ let changed=0;for(let i=0;i<36;i++)if(vd(V[i],REF[i])>DIFF)changed++;
+ if(changed>=12){popup=true;trayCnt=0;status();return}
+ if(popup){popup=false;status()}
+ if(vd(V[0],REF[0])>DIFF){trayCnt++;if(trayCnt<2)return;trayCnt=0;
+  if(badVec(V[0],0))return;
+  const r=nearest(V[0],true);
+  if(confident(r)&&r.l!==S.b[0]){pushUndo();S.b[0]=r.l;refresh()}}
+ else trayCnt=0}
+
+// ===================== ГЛАВНЫЙ ЦИКЛ =====================
+function readBoard(V){const b=Array(36).fill(0);let unsure=0;
+ for(let i=0;i<36;i++){const r=nearest(V[i],isStore(i));
+  if(confident(r)){if(isCat(r.l)&&!isStore(i)&&!(r.d<THR*0.8&&r.d<emptyDist(V[i])*0.6))b[i]=0;else b[i]=r.l}else unsure++}
+ return{b,unsure}}
+function resync(V){pushUndo();
+ S.b=readBoard(V).b;S.glow=-1;S.cur=0;MANUAL=false;countedId=0;
+ const g=locateActive(V);if(g>=1){S.b[g]=0;S.glow=g}
+ resetMism();popup=false;stableN=0;
+ setNote('🔄 Поле в игре сильно изменилось — перечитал его с картинки сам.');refresh()}
+function capTick(){if(!capOn||!video.videoWidth)return;drawFull();if(!RECT)return;
+ if(!REF&&!refTimer)scheduleRef();
+ const V=grab(),prev=PREVV;
+ if(REF&&synced&&!popup)trackActive(V);
+ if(S.cur)detect(V);else checkTray(V);
+ if(REF&&synced&&!popup)guessTick(V);
+ tryLearn(V);PREVV=V;
+ if(++tickN%2===0)checkMismatch(V);
+ // поле изменилось непонятно / «закрыто» долго, но картинка стоит — перечитываю сам
+ if(synced&&prev&&(popup||NOTE.startsWith('Поле в игре изменилось'))){
+  let st=true;for(let i=0;i<36;i++){if(i===S.glow)continue;if(vd(V[i],prev[i])>6){st=false;break}}
+  let dk=0;for(let i=0;i<36;i++)if(badVec(V[i],0)==='dark')dk++;
+  if(st&&dk<8)stableN++;else stableN=0;
+  if(stableN>=(popup?6:3))resync(V)}
+ else stableN=0;
+ drawCrop();status()}
+
+function badge(x,txt,X,Y,bg){x.font='15px "Segoe UI Emoji",sans-serif';const w=Math.max(20,x.measureText(txt).width+6);
+ x.fillStyle=bg;x.beginPath();x.roundRect?x.roundRect(X,Y,w,20,6):x.rect(X,Y,w,20);x.fill();
+ x.fillStyle='#000';x.fillText(txt,X+3,Y+16);return w}
+function drawCrop(){if(!capOn||!RECT||!video.videoWidth)return;const cv=$('crop'),S2=468,cs=S2/6;cv.width=cv.height=S2;const x=cv.getContext('2d');
+ x.drawImage(video,RECT.x,RECT.y,RECT.w,RECT.h,0,0,S2,S2);
+ if(S.glow>=1){const[r,c]=rc(S.glow),X=c*cs,Y=r*cs;
+  x.strokeStyle='#ffffff';x.setLineDash([6,4]);x.lineWidth=3;x.strokeRect(X+5,Y+5,cs-10,cs-10);x.setLineDash([]);
+  x.font='16px sans-serif';x.fillText('✨',X+6,Y+cs-8)}
+ const top=AN[0]?AN[0].i:-1;
+ const gone=new Set();let resCell=-1;
+ if(HOV>=0&&S.cur){const m=moveInfo(HOV);if(m&&m.r){for(const e of m.r.ev)if(e.cells)e.cells.forEach(c=>{if(c!==HOV)gone.add(c)});if(m.r.ev.some(e=>e.k==='merge'))resCell=HOV}}
+ for(let i=0;i<36;i++){const[r,c]=rc(i),X=c*cs,Y=r*cs;
+  if(gone.has(i)){x.fillStyle='rgba(224,80,60,.35)';x.fillRect(X+2,Y+2,cs-4,cs-4);x.strokeStyle='#e0503c';x.setLineDash([6,4]);x.lineWidth=3;x.strokeRect(X+4,Y+4,cs-8,cs-8);x.setLineDash([])}
+  if(i===resCell){x.strokeStyle='#f08a2c';x.lineWidth=5;x.strokeRect(X+3,Y+3,cs-6,cs-6)}
+  if(SHOWOV){
+   const lab=S.b[i]?E(S.b[i]):(i===S.glow&&S.cur?E(S.cur):'');
+   if(lab){x.font='15px "Segoe UI Emoji",sans-serif';const w=Math.max(20,x.measureText(lab).width+6);badge(x,lab,X+cs-w-3,Y+cs-23,'rgba(255,255,255,.82)')}}
+  if(i===top){const col='#2f9a3e';x.strokeStyle=col;x.lineWidth=7;x.strokeRect(X+3,Y+3,cs-6,cs-6);
+   x.fillStyle=col;x.beginPath();x.arc(X+cs-15,Y+15,12,0,7);x.fill();x.fillStyle='#fff';x.font='bold 16px sans-serif';x.fillText('1',X+cs-20,Y+21)}}}
+function cropCell(e){const cv=$('crop');const[p,q]=cpos(e,cv);const cs=cv.width/6;return Math.min(5,Math.floor(q/cs))*6+Math.min(5,Math.floor(p/cs))}
+$('crop').onmousemove=e=>{const i=cropCell(e);if(i!==HOV){HOV=i;renderHint();drawCrop()}};
+$('crop').onmouseleave=()=>{HOV=-1;renderHint();drawCrop()};
+$('crop').onclick=e=>{const i=cropCell(e);clickCell(i,CELLS[i])};
+$('crop').oncontextmenu=e=>{e.preventDefault();openMenu(cropCell(e),e.pageX,e.pageY)};
+
+// ===================== НОВАЯ ИГРА / С КАРТИНКИ =====================
+$('bNew').onclick=()=>{pushUndo();S={b:Array(36).fill(0),cur:0,score:0,glow:-1};synced=false;MANUAL=false;EDITED.clear();countedId=0;resetMism();
+ setNote('Новая игра: нажми «📥 С картинки».',true);refresh()};
+$('bRead').onclick=()=>{
+ if(!capOn||!RECT||!video.videoWidth){setNote('Сначала включи захват («📷 Начать захват») и выбери окно игры.',true);return}
+ const known=SAMPLES.filter(x=>x.l<100).length;
+ if(known<5){setNote('Я ещё не выучил иконки — в этот раз расставь поле правым кликом по клеткам на картинке.',true);return}
+ const V=grab();pushUndo();
+ const rb=readBoard(V);
+ S.b=rb.b;S.cur=0;S.glow=-1;MANUAL=false;EDITED.clear();countedId=0;resetMism();
+ const g=locateActive(V);if(g>=1){S.glow=g;S.b[g]=0}
+ synced=true;learnPaused=false;
+ setNote((rb.unsure?`Прочитал поле (не уверен в ${rb.unsure} клетк.).`:'Прочитал поле.')+` Мигающая — ${g>=1?cellName(g):'не нашёл'}. Слежу.`);
+ refresh()};
+
+// ===================== ЗАПУСК =====================
+$('bUndo').onclick=()=>{if(undo.length){S=JSON.parse(undo.pop());countedId=0;resetMism();setNote('');refresh()}};
+document.addEventListener('keydown',e=>{
+ const tg=e.target.tagName;if(tg==='INPUT'||tg==='SELECT'||tg==='TEXTAREA')return;
+ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();$('bUndo').click();return}
+ if(e.key==='Escape'){closeMenu();if(selecting){selecting=false;dragStart=null;drag=null;showFull(false)}setNote('');render();return}
+ if(e.key==='Enter'){e.preventDefault();doBest();return}
+ const n=parseInt(e.key,10);if(n>=1&&n<=9){setNote('');setCur(CUR_IDS[n-1],true)}});
+initWorkers();
+{const cr=cleanMemory();if(cr.n)setNote(cleanMsg(cr),true)}
+renderFreq();
+if(S.b.some(x=>x))synced=true;
+refresh();
+</script>
+<script>
+// ======================================================================
+//  ДОРАБОТКИ — один блок вместо всех заплаток
+//  1) что в руке — окошко игры  2) где мигает — белая подложка + правила игры
+//  3) слежение  4) интерфейс  5) память с GitHub  6) расчёт + подбор весов
+// ======================================================================
+(function(){
+ // ---------- 1. ОКОШКО «В РУКЕ»: сравниваю только с его же снимками ----------
+ const PN=24;
+ let PR=null;try{PR=JSON.parse(localStorage.getItem('tth_panel')||'null')}catch(e){}
+ let PM=[];try{PM=JSON.parse(localStorage.getItem('tth_panel2')||'[]')}catch(e){}
+ const saveP=()=>{PM=PM.slice(-80);try{localStorage.setItem('tth_panel2',JSON.stringify(PM))}catch(e){}};
+ const pc=document.createElement('canvas');pc.width=pc.height=PN;const px=pc.getContext('2d',{willReadFrequently:true});
+ function panelVec(){px.drawImage(video,PR.x,PR.y,PR.w,PR.h,0,0,PN,PN);const d=px.getImageData(0,0,PN,PN).data,v=[];
+  for(let p=0;p<PN*PN;p++)v.push(d[p*4],d[p*4+1],d[p*4+2]);return v}
+ const pd=(a,b)=>{let s=0;for(let k=0;k<a.length;k++)s+=Math.abs(a[k]-b[k]);return s/a.length};
+ function panelGuess(v){const m={};for(const x of PM){const d=pd(v,x.v);if(m[x.l]===undefined||d<m[x.l])m[x.l]=d}
+  const a=Object.entries(m).sort((p,q)=>p[1]-q[1]);
+  return{l:a[0]?+a[0][0]:0,d:a[0]?a[0][1]:99,d2:a[1]?a[1][1]:99}}
+ function learnPanel(l,v){if(!v||!CUR_IDS.includes(l))return;
+  PM=PM.filter(x=>x.l===l||pd(v,x.v)>12);
+  if(PM.some(x=>x.l===l&&pd(v,x.v)<4))return;
+  PM.push({l,v:v.map(Math.round)});saveP();updLearn()}
+ const btn=document.createElement('button');btn.className='sm';btn.textContent='🎯 Заново выделить окошко «в руке»';btn.style.marginTop='8px';
+ document.querySelector('[data-n="x-"]').parentElement.after(btn);
+ let selP=false;
+ btn.onclick=()=>{if(!capOn)return;selP=true;selecting=true;showFull(true);drawFull();
+  setNote('Обведи мышкой квадратик с иконкой слева внизу в игре (где «🍪 ×3 = 🍞» — только первый квадратик). Esc — отмена.')};
+ document.addEventListener('keydown',e=>{if(e.key==='Escape')selP=false});
+ const oldUp=fc.onmouseup;
+ fc.onmouseup=e=>{if(!selP)return oldUp(e);if(!dragStart)return;const k=fc.width/video.videoWidth;
+  if(drag&&drag.w>8&&drag.h>8){PR={x:drag.x/k,y:drag.y/k,w:drag.w/k,h:drag.h/k};PM=[];saveP();
+   try{localStorage.setItem('tth_panel',JSON.stringify(PR))}catch(err){}
+   setNote('Запомнил окошко. Когда в нём новая иконка — нажми её клавишу 1–9 один раз, дальше узнаю сам.')}
+  dragStart=null;drag=null;selecting=false;selP=false;showFull(!RECT)};
+ let curV=null,gl=0,gn=0,WINFO='';
+ const moving=V=>{for(let i=0;i<36;i++){if(i===S.glow||isCat(S.b[i]))continue;if(vd(V[i],REF[i])>DIFF)return true}return false};
+ guessTick=function(V){const el=$('glowInfo');
+  const tail=()=>WINFO?`<br><span class="small">${WINFO}</span>`:'';
+  if(!PR){el.innerHTML='✨ В руке: нажми <b>🎯 Заново выделить окошко «в руке»</b> (в «Рамка и чувствительность») и обведи квадратик слева внизу в игре'+tail();return}
+  const v=panelVec(),g=panelGuess(v),ok=g.l&&g.d<10&&g.d2>g.d*1.5;
+  let t=ok?`✨ В руке (окошко): ${E(g.l)}`:'✨ В руке (окошко): эту иконку ещё не знаю — нажми её клавишу 1–9, запомню';
+  t+=` <span class="small">(${g.d.toFixed(1)})</span>`;
+  if(MANUAL&&S.cur)t+=` · держу твой выбор ${E(S.cur)}`;
+  el.innerHTML=t+tail();
+  if(MANUAL&&S.cur){gn=0;return}
+  if(!ok){if(S.cur&&curV&&pd(v,curV)>12&&!moving(V)){S.cur=0;countedId=0;curV=null;recalc()}gn=0;return}
+  if(g.l===gl)gn++;else{gl=g.l;gn=1}
+  if(S.cur===g.l){curV=v;return}
+  if(gn<2||moving(V))return;
+  setCur(g.l,false);curV=v};
+ teachGlow=function(l){if(!PR||!capOn||!video.videoWidth)return;const v=panelVec();learnPanel(l,v);curV=v};
+
+ // ---------- 2. ГДЕ МИГАЕТ: белая подложка (относительно таких же иконок), иначе — правила игры ----------
+ const RW=TZ*6;
+ function ring(d,i,f){const[r,c]=rc(i),cx=c*TZ+32,cy=r*TZ+32;
+  for(let y=-30;y<=30;y+=2)for(let x=-30;x<=30;x+=2){const q=x*x+y*y;if(q<19*19||q>29*29)continue;
+   const o=((cy+y)*RW+cx+x)*4;f(Math.min(d[o],d[o+1],d[o+2]))}}
+ function byWhite(V){const d=tctx.getImageData(0,0,RW,RW).data;
+  const em=[];for(let i=1;i<36;i++)if(!S.b[i]&&vecBlank(V[i]))ring(d,i,m=>em.push(m));
+  if(em.length<50){WINFO='белая подложка: мало пустых клеток для сравнения';return -1}
+  em.sort((a,b)=>a-b);const thr=Math.min(250,em[Math.floor(em.length*0.97)]+8);
+  const a=[];
+  for(let i=1;i<36;i++){if(vecBlank(V[i]))continue;
+   let n=0,w=0;ring(d,i,m=>{n++;if(m>thr)w++});
+   const r=nearest(V[i],false);a.push({i,w:w/n,l:r.l==null?S.b[i]:r.l})}
+  for(const x of a){const o=a.filter(y=>y!==x&&y.l===x.l).map(y=>y.w).sort((p,q)=>p-q);
+   x.base=o.length?o[o.length>>1]:0;x.s=x.w-x.base}
+  a.sort((p,q)=>q.s-p.s);const b1=a[0],b2=a[1];
+  WINFO=b1?`белая подложка (порог ${thr}): ${cellName(b1.i)} — ${b1.s.toFixed(2)} (${b1.w.toFixed(2)} − ${b1.base.toFixed(2)}), следующая ${b2?cellName(b2.i)+' — '+b2.s.toFixed(2):'—'}`:'';
+  return b1&&b1.s>0.03&&(!b2||b1.s>Math.max(0,b2.s)*2+0.015)?b1.i:-1}
+ const vdC=(a,b)=>{let d=0;for(let k=363;k<471;k++){const q=a[k]-b[k];d+=q*q}return Math.sqrt(d/108)};
+ const foreign=(V,i)=>{let m=1e9;for(const x of SAMPLES){if(x.s||x.l===0||x.l>=100)continue;const d=vdC(V[i],x.v);if(d<m)m=d}return m};
+ const catD=(V,i,l)=>{let m=1e9;for(const x of SAMPLES)if(!x.s&&x.l===l){const d=vd(V[i],x.v);if(d<m)m=d}return m};
+ const catLike=(V,i)=>{const r=nearest(V[i],false);return confident(r)&&isCat(r.l)};
+ function pickActive(V){
+  let c=[];for(let i=1;i<36;i++)if(!S.b[i]&&!vecBlank(V[i]))c.push(i);
+  let moved=false;
+  for(let v=1;v<36;v++){if(!isCat(S.b[v])||!vecBlank(V[v])||c.length<2)continue;
+   const t=S.b[v],pool=t===10?c.filter(i=>NB[v].includes(i)):c;if(!pool.length)continue;
+   let pick=pool[0],bd=1e9;for(const i of pool){const d=catD(V,i,t);if(d<bd){bd=d;pick=i}}
+   S.b[pick]=t;S.b[v]=0;c=c.filter(i=>i!==pick);moved=true;if(S.glow===pick)S.glow=-1}
+  if(S.cur&&!isCat(S.cur)){const nc=c.filter(i=>!catLike(V,i));if(nc.length)c=nc}
+  let g=-1;
+  if(c.length===1)g=c[0];
+  else if(c.length>1){const same=S.cur?c.filter(i=>nearest(V[i],false).l===S.cur):[];
+   if(same.length===1)g=same[0];
+   else{let bv=-1;for(const i of(same.length?same:c)){const f=foreign(V,i);if(f>bv){bv=f;g=i}}}}
+  return{g,moved}}
+ trackActive=function(V){
+  const w=byWhite(V);
+  if(w>=1){if(w!==S.glow||S.b[w]){S.b[w]=0;S.glow=w;MISC[w]=0;SEEN[w]=null;recalc()}return}
+  const keep=S.glow>=1&&!S.b[S.glow]&&(MANUAL||!(S.cur&&!isCat(S.cur)&&catLike(V,S.glow)));
+  if(keep)return;
+  const r=pickActive(V),ch=r.g>=1&&r.g!==S.glow;
+  if(ch){S.glow=r.g;MISC[r.g]=0;SEEN[r.g]=null}
+  if(r.moved||ch)recalc()};
+ locateActive=function(V){return byWhite(V)};
+
+ // ---------- 3. СЛЕЖЕНИЕ ----------
+ const unk='Поле в игре изменилось, но я не понял как — дождусь, пока картинка успокоится, и перечитаю поле сам.';
+ const many=V=>{let n=0,dk=0;for(let i=0;i<36;i++){if(vd(V[i],REF[i])>DIFF)n++;if(badVec(V[i],0)==='dark')dk++}return n>=12&&dk<8};
+ const d0=detect;
+ detect=function(V){
+  if(REF&&synced&&many(V)){popup=false;setNote(unk,true);return}
+  if(REF&&S.glow>=1){const[gr,gc]=rc(S.glow);let out=false;
+   for(let i=0;i<36;i++){if(vd(V[i],REF[i])<=DIFF)continue;const[r,c]=rc(i);if(Math.abs(r-gr)>1||Math.abs(c-gc)>1){out=true;break}}
+   if(!out)return}
+  const cur0=S.cur,b0=S.b.slice(),sv=curV;
+  d0(V);
+  if(!cur0||S.cur||!sv)return;
+  const placed=[];for(let i=1;i<36;i++)if(b0[i]!==S.b[i]&&S.b[i]===cur0)placed.push(i);
+  if(placed.length!==1)return;const cell=placed[0];
+  setTimeout(()=>{if(!LASTV)return;const r=nearest(LASTV[cell],false);
+   if(!confident(r)||!r.l||isCat(r.l))return;
+   if(r.l!==cur0&&S.b[cell]===cur0){S.b[cell]=r.l;recalc()}
+   learnPanel(r.l,sv)},1200)};
+ const t0=checkTray;
+ checkTray=function(V){if(REF&&synced&&many(V)){popup=false;setNote(unk,true);return}t0(V)};
+ capTick=function(){if(!capOn||!video.videoWidth)return;drawFull();if(!RECT)return;
+  if(!REF&&!refTimer)scheduleRef();
+  const V=grab(),prev=PREVV;
+  if(REF&&synced&&!popup)trackActive(V);
+  if(S.cur)detect(V);else checkTray(V);
+  if(REF&&synced&&!popup)guessTick(V);
+  tryLearn(V);PREVV=V;
+  if(++tickN%2===0)checkMismatch(V);
+  if(synced&&prev&&(popup||NOTE.startsWith('Поле в игре изменилось'))){
+   let st=true;
+   for(let i=0;i<36;i++){if(i===S.glow)continue;if(!isStore(i)&&catLike(V,i))continue;if(vd(V[i],prev[i])>6){st=false;break}}
+   let dk=0;for(let i=0;i<36;i++)if(badVec(V[i],0)==='dark')dk++;
+   if(st&&dk<8)stableN++;else stableN=0;
+   if(stableN>=(popup?6:3))resync(V)}
+  else stableN=0;
+  drawCrop();status()};
+ let since=0;
+ setInterval(()=>{if(!capOn||!synced||!LASTV){since=0;return}
+  if(!NOTE.startsWith('Поле в игре изменилось')){since=0;return}
+  if(!since)since=Date.now();
+  let dk=0;for(let i=0;i<36;i++)if(badVec(LASTV[i],0)==='dark')dk++;
+  if(dk<8&&Date.now()-since>3000){since=0;resync(LASTV)}},500);
+
+ // ---------- 4. ИНТЕРФЕЙС ----------
+ $('boardDet').style.display='none';
+ const ul=document.querySelector('.tips ul');
+ if(ul)ul.innerHTML=`
+  <li>Запуск: «📷 Начать захват» → выбрать окно игры → «📥 С картинки». Дальше просто ходи в игре.</li>
+  <li>Что в руке — тренер берёт из квадратика слева внизу в игре. Новую для него иконку нажми один раз клавишей 1–9.</li>
+  <li>Мигающую клетку находит по белой подложке. Ошибся — правый клик по клетке → «✨ Здесь мигает».</li>
+  <li>Зелёная <b>1</b> — лучший ход. Наведи мышку на клетку — покажет, что будет.</li>
+  <li>После партии — «💾 Сохранить память в файл».</li>`;
+ updLearn=function(){const known=new Set(SAMPLES.filter(x=>x.l>0&&x.l<100).map(x=>x.l)),pk=[...new Set(PM.map(x=>x.l))];
+  $('learnInfo').innerHTML=`🧠 <b>Выучил на поле:</b> ${[...known].map(E).join(' ')||'пока ничего'}<br>✨ <b>Окошко «в руке» знает:</b> ${pk.map(E).join(' ')||'пока ничего — когда в окошке новая иконка, нажми её клавишу 1–9'}${learnPaused?'<br>⏸ <b>Обучение на паузе</b> до «🔄 Поле совпадает»':''}`};
+ updLearn();
+
+ // ---------- 5. ПАМЯТЬ: сохраняю и окошко с весами; если своей нет — беру с GitHub ----------
+ $('bExp').onclick=()=>{const blob=new Blob([JSON.stringify({v:4,SAMPLES,PTS,FREQ,GM,PANEL:PM,WT})],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='tea-house-memory.json';document.body.appendChild(a);a.click();a.remove()};
+ function extra(d){if(Array.isArray(d.PANEL)&&d.PANEL.length){PM=d.PANEL;saveP()}
+  if(d.WT){Object.assign(WT,d.WT);try{localStorage.setItem('tth_wt2',JSON.stringify(WT))}catch(e){}}updLearn()}
+ const oi=$('fImp').onchange;
+ $('fImp').onchange=e=>{const f=e.target.files[0];if(f){const r=new FileReader();r.onload=()=>{try{extra(JSON.parse(r.result))}catch(err){}};r.readAsText(f)}oi(e)};
+ if(!SAMPLES.length)fetch('tea-house-memory.json').then(r=>r.ok?r.json():null).then(d=>{
+  if(!d||!Array.isArray(d.SAMPLES))return;
+  SAMPLES=d.SAMPLES;saveS();
+  if(d.PTS){Object.assign(PTS,d.PTS);try{localStorage.setItem('tth_pts',JSON.stringify(PTS))}catch(e){}}
+  if(d.FREQ){FREQ=d.FREQ;try{localStorage.setItem('tth_freq',JSON.stringify(FREQ))}catch(e){}rebuildPL();renderFreq()}
+  if(!PM.length)extra(d);
+  cleanMemory();updLearn();setNote('Загрузил готовую память — иконки на поле уже знаю.');recalc()}).catch(()=>{});
+
+ // ---------- 6. РАСЧЁТ ----------
+ Object.assign(MAT,{10:-30,11:-60});
+ const WT0={mat:1,pair:1,dead:0.6,edge:1,space:5,crowd:2,cat:3,split:0.4};
+ Object.assign(WT,WT0);
+ try{const w=JSON.parse(localStorage.getItem('tth_wt2')||'null');if(w)Object.assign(WT,w)}catch(e){}
+ // поднос: 🍴 дороже, чем больше рыжих; 📺 дороже, чем теснее поле
+ function bankVal(b,t){if(!t)return 0;
+  if(t===20){let o=0;for(let i=1;i<36;i++)if(b[i]===11)o++;return 8+o*25}
+  if(t===21){let e=0;for(let i=1;i<36;i++)if(!b[i])e++;return 12+(e<10?(10-e)*6:0)}
+  return BANK[t]||0}
+ toolUse=function toolUse(b,p){
+  if(p===20){let best=null;
+   for(const want of[11,10]){for(let i=1;i<36;i++)if(b[i]===want){const r=simulate(b,i,20,true);const v=r.pts+evalBoard(r.b);if(!best||v>best.v)best={r,v}}if(best)break}
+   if(best)return best.r;
+   for(let i=1;i<36;i++)if(b[i]===15)return simulate(b,i,20,true);
+   return null}
+  let best=null;
+  for(let i=1;i<36;i++){if(b[i])continue;if(!NB[i].some(j=>NEXT[b[j]]))continue;
+   const r=simulate(b,i,21,true);if(r&&r.pts>0&&(!best||r.pts>best.pts))best=r}
+  return best};
+ placeQuick=function placeQuick(b,p){let best=-1,bs=-1e9,merge=null;
+  for(let i=1;i<36;i++){if(b[i])continue;
+   let emp=0,same=0,cats=0;const seen=[];
+   for(const j of NB[i]){const t=b[j];if(!t){emp++;continue}if(isCat(t)||t===12)cats++;
+    if(t===p&&!seen.includes(j)){const g=group(b,j,p);for(const x of g)seen.push(x);same+=g.length}}
+   let s;
+   if(NEXT[p]&&same>=2){const r=simulate(b,i,p,true);s=100000+r.pts;if(s>bs){bs=s;best=i;merge=r}continue}
+   if(p===10)s=-emp*10+cats*4+(isCorner(i)?6:isEdge(i)?3:0);
+   else if(p===11)s=(isCorner(i)?6:isEdge(i)?3:0)-emp+cats*2;
+   else{s=same*20-emp*0.5;const lv=(P[p]&&P[p].lv)||0;
+    if(P[p]&&!P[p].tea&&lv>=3)s+=isCorner(i)?lv*3:isEdge(i)?lv:0;
+    for(const j of NB[i]){const t=b[j];if(t&&t!==p&&NEXT[t]&&NB[j].some(q=>q!==i&&b[q]===t))s-=4}}
+   if(s>bs){bs=s;best=i;merge=null}}
+  if(best<0)return null;
+  return merge||simulate(b,best,p,true)};
+ quickPlace=function quickPlace(b,p){const tray=b[0];let emp=0;for(let i=1;i<36;i++)if(!b[i])emp++;
+  if(tray===20&&p!==20){let o=0;for(let i=1;i<36;i++)if(b[i]===11)o++;
+   if(o){const nb=b.slice();nb[0]=p;const u=toolUse(nb,20);if(u)return u}}
+  if(tray===21&&p!==21&&!isCat(p)){const nb=b.slice();nb[0]=p;const u=toolUse(nb,21);if(u&&(u.pts>=(PTS[3]||20)||emp<6))return u}
+  if(p===20){let o=0;for(let i=1;i<36;i++)if(b[i]===11)o++;
+   if(o){const u=toolUse(b,20);if(u)return u}
+   if(!tray){const nb=b.slice();nb[0]=p;return{b:nb,pts:0}}
+   const u=toolUse(b,20);if(u)return u;
+   let c=-1,m=1e9;for(let i=1;i<36;i++)if(b[i]&&(MAT[b[i]]||0)<m){m=MAT[b[i]]||0;c=i}
+   return c<0?null:simulate(b,c,20,true)}
+  if(p===21){const u=toolUse(b,21);
+   if(u&&(u.pts>=(PTS[3]||20)||emp<6||tray))return u;
+   if(!tray){const nb=b.slice();nb[0]=p;return{b:nb,pts:0}}
+   if(u)return u;
+   let c=-1,m=99;for(let i=1;i<36;i++)if(!b[i]){let n=0;for(const j of NB[i])if(!b[j])n++;if(n<m){m=n;c=i}}
+   return c<0?null:simulate(b,c,21,true)}
+  return placeQuick(b,p)};
+ rolloutF=function rolloutF(b,R,depth){let pts=0;
+  for(let d=0;d<depth;d++){const p=rollPieceR(R);
+   let emp=0;for(let i=1;i<36;i++)if(!b[i])emp++;
+   if(!emp&&p!==20)return pts-3000;
+   const r=quickPlace(b,p);if(!r)continue;
+   pts+=r.pts;b=r.b;moveCatsR(b,R)}
+  return pts+evalBoard(b)+bankVal(b,b[0])};
+ // целая партия «сам с собой» — для подбора весов
+ function playGame(seed){const R=mulberry32(seed);let b=Array(36).fill(0),pts=0;
+  for(let t=0;t<400;t++){const p=rollPieceR(R);let emp=0;for(let i=1;i<36;i++)if(!b[i])emp++;
+   if(!emp&&p!==20)break;
+   const opts=[];
+   for(let i=1;i<36;i++){if(p===20?!b[i]:b[i])continue;const r=simulate(b,i,p,true);if(r)opts.push(r)}
+   if(!b[0]){const nb=b.slice();nb[0]=p;opts.push({b:nb,pts:0})}
+   else if(b[0]!==p){const X=b[0],nb=b.slice();nb[0]=p;
+    for(let j=1;j<36;j++){if(X===20?!nb[j]:nb[j])continue;const r=simulate(nb,j,X,true);if(r)opts.push(r)}}
+   let best=null,bv=-1e18;
+   for(const r of opts){const v=r.pts+evalBoard(r.b)+bankVal(r.b,r.b[0]);if(v>bv){bv=v;best=r}}
+   if(!best)break;pts+=best.pts;b=best.b;moveCatsR(b,R)}
+  return pts}
+ analyze=function(){const b=S.b,cur=S.cur,res=[];if(!cur)return res;
+  for(const i of candidates(b,cur)){const r=simulate(b,i,cur);res.push({i,r,v:r.pts+expectNext(r.b)+bankVal(r.b,b[0])})}
+  if(!b[0]){const nb=b.slice();nb[0]=cur;res.push({i:0,store:'put',v:expectNext(nb)+bankVal(nb,cur)})}
+  else if(b[0]!==cur){const X=b[0],nb=b.slice();nb[0]=cur;let bv=-Infinity,bi=-1;
+   for(const j of candidates(nb,X)){const r=simulate(nb,j,X,true);const v=r.pts+expectNext(r.b)+bankVal(r.b,cur);if(v>bv){bv=v;bi=j}}
+   if(bi>=0)res.push({i:0,store:'swap',X,then:bi,v:bv})}
+  res.sort((a,c)=>c.v-a.v);return res};
+ let WCODE='';
+ initWorkers=function(){
+  const FN=[group,mergeAt,trapCats,simulate,moveCatsR,evalBoard,mulberry32,rollPieceR,toolUse,placeQuick,quickPlace,rolloutF,mcRun,bankVal,playGame].map(f=>f.toString()).join('\n');
+  const HEAD='const P='+JSON.stringify(P)+',NEXT='+JSON.stringify(NEXT)+',W='+JSON.stringify(W)+',MAT='+JSON.stringify(MAT)+',BANK='+JSON.stringify(BANK)+',NB='+JSON.stringify(NB)+';\n'+
+  'const cfg={store:true};const isStore=i=>i===0;const isCat=x=>x===10||x===11;const rc=i=>[i/6|0,i%6];\n'+
+  'const dist=(a,b)=>{const[r1,c1]=rc(a),[r2,c2]=rc(b);return Math.abs(r1-r2)+Math.abs(c1-c2)};\n'+
+  'const isEdge=i=>{const[r,c]=rc(i);return r===0||r===5||c===0||c===5};\n'+
+  'const isCorner=i=>{const[r,c]=rc(i);return (r===0||r===5)&&(c===0||c===5)};\nlet PTS,WT,PL,PSUM;\n';
+  const SIM='let job=null;\n'+
+  'onmessage=e=>{const m=e.data;if(m.t==="stop"){job=null;return}\n'+
+  ' if(m.t==="play"){PTS=m.PTS;WT=m.WT;PL=m.PL;PSUM=m.PSUM;let s=0;for(const sd of m.seeds)s+=playGame(sd);postMessage({s});return}\n'+
+  ' if(m.t==="sim"){PTS=m.PTS;WT=m.WT;PL=m.PL;PSUM=m.PSUM;\n'+
+  '  const j={id:m.id,c:m.c,depth:m.depth,end:Date.now()+m.ms,seed:m.seed,k:0,acc:m.c.map(()=>0),last:0};job=j;setTimeout(()=>run(j),0)}};\n'+
+  'function run(j){if(j!==job)return;mcRun(j,40);const done=Date.now()>=j.end&&j.k>=5;\n'+
+  ' if(done||Date.now()-j.last>300){j.last=Date.now();postMessage({id:j.id,acc:j.acc,k:j.k,done})}\n'+
+  ' if(done){job=null;return}setTimeout(()=>run(j),0)}\n';
+  WCODE=HEAD+FN+SIM;
+  const n=Math.max(1,Math.min(8,(navigator.hardwareConcurrency||4)-2));
+  try{const url=URL.createObjectURL(new Blob([WCODE],{type:'text/javascript'}));
+   for(let k=0;k<n;k++)WORKERS.push(new Worker(url))}catch(e){WORKERS=[]}};
+ WORKERS.forEach(w=>w.terminate());WORKERS=[];initWorkers();
+
+ // подбор весов самоигрой
+ const box=document.createElement('div');
+ box.innerHTML=`<div class="lbl">Подбор весов самоигрой</div>
+  <div class="row"><button class="sm" id="bTune">🧪 Подобрать (3 мин)</button><button class="sm" id="bTuneReset">вернуть как было</button></div>
+  <div class="small" id="tuneInfo"></div>`;
+ $('setDet').appendChild(box);
+ const wtStr=()=>'Веса: '+Object.entries(WT).map(([k,v])=>k+' '+(+v).toFixed(2)).join(' · ');
+ $('tuneInfo').textContent=wtStr();
+ let tuning=false;
+ $('bTuneReset').onclick=()=>{Object.assign(WT,WT0);try{localStorage.removeItem('tth_wt2')}catch(e){}$('tuneInfo').textContent=wtStr();recalc()};
+ $('bTune').onclick=async()=>{if(tuning){tuning=false;return}
+  tuning=true;$('bTune').textContent='⏹ Остановить';stopWorkers();
+  const url=URL.createObjectURL(new Blob([WCODE],{type:'text/javascript'}));
+  const n=Math.max(1,Math.min(8,(navigator.hardwareConcurrency||4)-1)),ws=[];
+  for(let k=0;k<n;k++){const w=new Worker(url);w.q=[];w.onmessage=e=>{const f=w.q.shift();if(f)f(e.data.s)};ws.push(w)}
+  const call=(w,wt,seeds)=>new Promise(res=>{w.q.push(res);w.postMessage({t:'play',WT:wt,seeds,PTS,PL,PSUM})});
+  const run=async(wt,seeds)=>{const r=await Promise.all(ws.map((w,k)=>{const p=seeds.filter((_,j)=>j%n===k);return p.length?call(w,wt,p):Promise.resolve(0)}));
+   return r.reduce((a,b)=>a+b,0)/seeds.length};
+  let base={...WT},acc=0,rounds=0,last='';const t0=Date.now(),keys=Object.keys(WT);
+  while(tuning&&Date.now()-t0<180000){
+   const cand={...base};
+   for(let q=0;q<2;q++){const k=keys[Math.floor(Math.random()*keys.length)];cand[k]=Math.max(0.01,cand[k]*Math.exp((Math.random()*2-1)*0.5))}
+   const seeds=[];for(let q=0;q<n*4;q++)seeds.push(Math.floor(Math.random()*1e9));
+   const[sb,sc]=await Promise.all([run(base,seeds),run(cand,seeds)]);
+   rounds++;
+   if(sc>sb*1.03){base=cand;acc++;Object.assign(WT,base);try{localStorage.setItem('tth_wt2',JSON.stringify(WT))}catch(e){}}
+   last=`Раунд ${rounds}, улучшений ${acc}. Средний счёт самоигры ≈ ${Math.round(Math.max(sb,sc)*10)}. Осталось ${Math.max(0,Math.round((180000-(Date.now()-t0))/1000))} с`;
+   $('tuneInfo').textContent=last}
+  ws.forEach(w=>w.terminate());tuning=false;$('bTune').textContent='🧪 Подобрать (3 мин)';
+  $('tuneInfo').innerHTML=last+'<br>'+wtStr();recalc()};
+
+ recalc();
+})();
+</script>
+<script>
+// ===== Мигающая по белой подложке + «не понял ход» → через 3 с перечитываю поле сам =====
+(function(){
+ const RW=TZ*6;let WINFO='';
+ function ring(d,i,f){const[r,c]=rc(i),cx=c*TZ+32,cy=r*TZ+32;
+  for(let y=-30;y<=30;y+=2)for(let x=-30;x<=30;x+=2){const q=x*x+y*y;if(q<19*19||q>29*29)continue;
+   const o=((cy+y)*RW+cx+x)*4;f(Math.min(d[o],d[o+1],d[o+2]))}}
+ function byWhite(V){const d=tctx.getImageData(0,0,RW,RW).data;
+  const em=[];for(let i=1;i<36;i++)if(!S.b[i]&&vecBlank(V[i]))ring(d,i,m=>em.push(m));
+  if(em.length<50){WINFO='белая подложка: мало пустых клеток для сравнения';return -1}
+  em.sort((a,b)=>a-b);const thr=Math.min(250,em[Math.floor(em.length*0.97)]+8);
+  const a=[];
+  for(let i=1;i<36;i++){if(vecBlank(V[i]))continue;if(S.b[i]&&S.cur&&S.b[i]!==S.cur)continue;
+   let n=0,w=0;ring(d,i,m=>{n++;if(m>thr)w++});a.push([i,w/n])}
+  a.sort((p,q)=>q[1]-p[1]);const b1=a[0],b2=a[1];
+  WINFO=b1?`белая подложка (порог ${thr}): ${cellName(b1[0])} — ${b1[1].toFixed(2)}, следующая ${b2?b2[1].toFixed(2):'—'}`:'';
+  return b1&&b1[1]>0.05&&(!b2||b1[1]>b2[1]*3+0.02)?b1[0]:-1}
+ locateActive=function(V){return byWhite(V)};
+ const prevT=trackActive;
+ trackActive=function(V){const g=byWhite(V);
+  if(g>=1){if(g!==S.glow||S.b[g]){S.b[g]=0;S.glow=g;MISC[g]=0;SEEN[g]=null;recalc()}return}
+  prevT(V)};
+ const prevG=guessTick;
+ guessTick=function(V){prevG(V);if(WINFO)$('glowInfo').innerHTML+=`<br><span class="small">${WINFO}</span>`};
+ // не понял ход — не жду вечно: через 3 секунды перечитываю поле (если экран не затемнён)
+ let since=0;
+ setInterval(()=>{if(!capOn||!synced||!LASTV){since=0;return}
+  if(!NOTE.startsWith('Поле в игре изменилось')){since=0;return}
+  if(!since)since=Date.now();
+  let dk=0;for(let i=0;i<36;i++)if(badVec(LASTV[i],0)==='dark')dk++;
+  if(dk<8&&Date.now()-since>3000){since=0;resync(LASTV)}},500);
+})();
+</script>
+<script>
+// ===== Уборка: прячу лишнее, обновляю подсказки =====
+(function(){
+ $('boardDet').style.display='none';                          // «Поле тренера» не нужно — всё видно на картинке
+ const b=[...document.querySelectorAll('button')].find(x=>x.textContent.includes('Окошко «в руке»'));
+ if(b){b.textContent='🎯 Заново выделить окошко «в руке»';document.querySelector('[data-n="x-"]').parentElement.after(b);b.style.marginTop='8px'}
+ const ul=document.querySelector('.tips ul');
+ if(ul)ul.innerHTML=`
+  <li>Запуск: «📷 Начать захват» → выбрать окно игры → «📥 С картинки». Дальше просто ходи в игре.</li>
+  <li>Что в руке — тренер берёт из квадратика слева внизу в игре. Новую для него иконку нажми один раз клавишей 1–9 — дальше узнаёт сам.</li>
+  <li>Мигающую клетку находит по белой подложке. Ошибся — правый клик по клетке → «✨ Здесь мигает».</li>
+  <li>Зелёная <b>1</b> — лучший ход. Наведи мышку на клетку — покажет, что будет.</li>
+  <li>После партии — «💾 Сохранить память в файл».</li>`;
+})();
+</script>
+<script>
+// ===== Память по умолчанию: если своей нет — беру tea-house-memory.json, лежащий рядом (на GitHub) =====
+(function(){
+ if(SAMPLES.length)return;                       // своя память уже есть — не трогаю
+ fetch('tea-house-memory.json').then(r=>r.ok?r.json():null).then(d=>{
+  if(!d||!Array.isArray(d.SAMPLES))return;
+  SAMPLES=d.SAMPLES;saveS();
+  if(d.PTS){Object.assign(PTS,d.PTS);try{localStorage.setItem('tth_pts',JSON.stringify(PTS))}catch(e){}}
+  if(d.FREQ){FREQ=d.FREQ;try{localStorage.setItem('tth_freq',JSON.stringify(FREQ))}catch(e){}rebuildPL();renderFreq()}
+  cleanMemory();updLearn();setNote('Загрузил готовую память — иконки на поле уже знаю.');recalc()
+ }).catch(()=>{})
+})();
+</script>
+<script>
+// ===== Вилка по коту: кот исчезает (клетка пустая), а не превращается в 🍵 — как написано в игре =====
+(function(){
+ simulate=function simulate(b,i,piece,noEv){let nb=b.slice(),ev=noEv?null:[],pts=0;
+  if(isStore(i))return null;
+  if(piece===20){const t=nb[i];if(!t)return null;
+   nb[i]=0;if(ev)ev.push({k:'del',t,cells:[i]})}
+  else if(piece===21){if(nb[i])return null;let best=null;
+   for(const t of[1,2,3,4,5,6,7,12,13]){if(!NB[i].some(j=>nb[j]===t))continue;
+    const tb=nb.slice(),tev=ev?[]:null;tb[i]=t;const p=mergeAt(tb,i,tev);
+    if(tb[i]!==t){const top=tb[i];if(!best||p>best.p||(p===best.p&&top>best.top))best={t,p,tb,tev,top}}}
+   if(best){nb=best.tb;if(ev){ev.push({k:'oven',t:best.t});ev.push(...best.tev)}pts+=best.p}
+   else{nb[i]=15;if(ev)ev.push({k:'black'})}}
+  else{if(nb[i])return null;nb[i]=piece;pts+=mergeAt(nb,i,ev)}
+  pts+=trapCats(nb,i,ev);
+  return{b:nb,pts,ev}};
+ WORKERS.forEach(w=>w.terminate());WORKERS=[];initWorkers();recalc();
+})();
+</script>
+<script>
+// ===== Чайная цепочка ценится по тем же правилам, что десерты (по очкам, которые приносит) =====
+(function(){
+ Object.assign(W,{12:20,13:40});            // пара 🍵 (→🍨 100 очков), пара 🍨 (→🏡 500 очков)
+ Object.assign(MAT,{12:30,13:150,14:800});  // как 🍮 / между 🍫 и 🧁 / как 🍰
+ WORKERS.forEach(w=>w.terminate());WORKERS=[];initWorkers();recalc();
+})();
+</script>
+<script>
+// ===== Мигающая: белая подложка должна быть со всех сторон (у соседа, на которого залезла большая иконка, — только с одного бока) =====
+(function(){
+ const RW=TZ*6;let INFO='';
+ function sectors(d,i,thr){const[r,c]=rc(i),cx=c*TZ+32,cy=r*TZ+32,n=[0,0,0,0],w=[0,0,0,0];
+  for(let y=-30;y<=30;y+=2)for(let x=-30;x<=30;x+=2){const q=x*x+y*y;if(q<19*19||q>29*29)continue;
+   const o=((cy+y)*RW+cx+x)*4,s=Math.abs(y)>Math.abs(x)?(y<0?0:1):(x<0?2:3);n[s]++;if(Math.min(d[o],d[o+1],d[o+2])>thr)w[s]++}
+  const f=w.map((v,k)=>v/n[k]).sort((p,q)=>p-q);return(f[1]+f[2])/2}      // середина из 4 сторон
+ function emptyThr(d,V){const em=[];
+  for(let i=1;i<36;i++)if(!S.b[i]&&vecBlank(V[i])){const[r,c]=rc(i),cx=c*TZ+32,cy=r*TZ+32;
+   for(let y=-30;y<=30;y+=2)for(let x=-30;x<=30;x+=2){const q=x*x+y*y;if(q<19*19||q>29*29)continue;const o=((cy+y)*RW+cx+x)*4;em.push(Math.min(d[o],d[o+1],d[o+2]))}}
+  if(em.length<50)return -1;em.sort((a,b)=>a-b);return Math.min(250,em[Math.floor(em.length*0.97)]+8)}
+ function byWhite4(V){const d=tctx.getImageData(0,0,RW,RW).data,thr=emptyThr(d,V);
+  if(thr<0){INFO='';return -1}
+  const a=[];
+  for(let i=1;i<36;i++){if(vecBlank(V[i]))continue;const r=nearest(V[i],false);a.push({i,w:sectors(d,i,thr),l:r.l==null?S.b[i]:r.l})}
+  for(const x of a){const o=a.filter(y=>y!==x&&y.l===x.l).map(y=>y.w).sort((p,q)=>p-q);x.s=x.w-(o.length?o[o.length>>1]:0)}
+  a.sort((p,q)=>q.s-p.s);const b1=a[0],b2=a[1];
+  INFO=b1?`подложка со всех сторон: ${cellName(b1.i)} — ${b1.s.toFixed(2)}, следующая ${b2?cellName(b2.i)+' — '+b2.s.toFixed(2):'—'}`:'';
+  return b1&&b1.s>0.03&&(!b2||b1.s>Math.max(0,b2.s)*2+0.015)?b1.i:-1}
+ const prevT=trackActive;
+ trackActive=function(V){const g=byWhite4(V);
+  if(g>=1){if(g!==S.glow||S.b[g]){S.b[g]=0;S.glow=g;MISC[g]=0;SEEN[g]=null;recalc()}return}
+  if(S.glow>=1&&!S.b[S.glow])return;                    // найденную держу — старый способ её не сдвинет
+  prevT(V)};
+ locateActive=function(V){return byWhite4(V)};
+ const prevG=guessTick;
+ guessTick=function(V){prevG(V);const el=$('glowInfo');
+  el.innerHTML=el.innerHTML.replace(/<br><span class="small">белая подложка[^<]*<\/span>/g,'');   // старые строки убираю
+  if(INFO)el.innerHTML+=`<br><span class="small">${INFO}</span>`};
+})();
+</script>
+</body>
+</html>
